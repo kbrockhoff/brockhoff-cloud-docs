@@ -1,0 +1,584 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.tf'
+      - '**/*.md'
+      - '.terraform-docs.yml'
+      - 'docs/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/*.tf'
+      - '**/*.md'
+      - '.terraform-docs.yml'
+      - 'docs/**'
+  workflow_dispatch:
+  schedule:
+    # Run weekly to keep documentation fresh
+    - cron: '0 2 * * 1'
+
+env:
+  TERRAFORM_VERSION: '1.5.0'
+
+jobs:
+  generate-docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Install terraform-docs
+        run: |
+          curl -sSLo ./terraform-docs.tar.gz https://terraform-docs.io/dl/v0.16.0/terraform-docs-v0.16.0-$(uname)-amd64.tar.gz
+          tar -xzf terraform-docs.tar.gz
+          chmod +x terraform-docs
+          sudo mv terraform-docs /usr/local/bin/
+          terraform-docs --version
+
+      - name: Install Additional Tools
+        run: |
+          # Install markdownlint for documentation linting
+          npm install -g markdownlint-cli
+          
+          # Install markdown-toc for table of contents generation
+          npm install -g markdown-toc
+
+      - name: Generate Module Documentation
+        run: |
+          echo "🔄 Generating Terraform module documentation..."
+          
+          # Find all directories with Terraform files
+          find . -name "*.tf" -exec dirname {} \; | sort -u | while read dir; do
+            # Skip hidden directories and .terraform directories
+            if [[ "$dir" == *"/.terraform"* ]] || [[ "$dir" == */".git"* ]]; then
+              continue
+            fi
+            
+            # Check if directory has main.tf or is a module directory
+            if [ -f "$dir/main.tf" ] || [ -f "$dir/variables.tf" ]; then
+              echo "📝 Generating docs for: $dir"
+              cd "$dir"
+              
+              # Generate terraform-docs
+              if [ -f ".terraform-docs.yml" ]; then
+                terraform-docs .
+              else
+                # Use default configuration
+                terraform-docs markdown table --output-file README.md --output-mode inject .
+              fi
+              
+              cd - > /dev/null
+            fi
+          done
+
+      - name: Generate API Reference
+        run: |
+          echo "🔄 Generating API reference documentation..."
+          
+          # Create API reference directory if it doesn't exist
+          mkdir -p docs/api
+          
+          # Generate comprehensive API documentation
+          cat > docs/api/README.md << 'EOF'
+          # API Reference
+          
+          This directory contains comprehensive API documentation for all Brockhoff Cloud Terraform modules.
+          
+          ## Module Categories
+          
+          ### Foundation Modules
+          - [Networking](./networking.md) - VPC, subnets, routing, and network security
+          - [Security](./security.md) - Security groups, NACLs, WAF, and access control
+          - [Identity](./identity.md) - IAM roles, policies, and RBAC
+          
+          ### Service Modules
+          - [Compute](./compute.md) - Virtual machines, auto-scaling, and container services
+          - [Storage](./storage.md) - Object storage, block storage, and file systems
+          - [Database](./database.md) - Managed databases, caching, and data warehousing
+          
+          ### Composite Modules
+          - [Web Application](./web-app.md) - Complete web application stack
+          - [Data Pipeline](./data-pipeline.md) - ETL and analytics infrastructure
+          - [Microservices](./microservices.md) - Container orchestration platform
+          
+          ## Common Patterns
+          
+          ### Standard Variables
+          All modules implement these standard variables:
+          
+          - `context` - Context object from terraform-external-context module
+          - `environment_type` - Environment configuration (Development, Production, etc.)
+          - `encryption_config` - Encryption settings and KMS key management
+          - `monitoring_config` - Monitoring and observability settings
+          - `alarms_config` - Alerting and notification configuration
+          
+          ### Standard Outputs
+          All modules provide these standard outputs:
+          
+          - `resource_id` - Primary resource identifier
+          - `resource_arn` - Resource ARN/URI/ID depending on cloud provider
+          - `kms_key_id` - KMS key ID used for encryption
+          - `monthly_cost_estimate` - Estimated monthly cost in USD
+          - `compliance_report` - Well-architected framework compliance assessment
+          
+          ## Usage Patterns
+          
+          ### Basic Usage
+          ```hcl
+          module "example" {
+            source = "kbrockhoff/module-name/provider"
+            version = "~> 1.0"
+            
+            context = module.context.context
+            
+            # Module-specific configuration
+          }
+          ```
+          
+          ### Multi-Cloud Usage
+          ```hcl
+          # AWS
+          module "aws_example" {
+            source = "kbrockhoff/module-name/aws"
+            version = "~> 1.0"
+            context = module.aws_context.context
+          }
+          
+          # Azure
+          module "azure_example" {
+            source = "kbrockhoff/module-name/azurerm"
+            version = "~> 1.0"
+            context = module.azure_context.context
+          }
+          
+          # GCP
+          module "gcp_example" {
+            source = "kbrockhoff/module-name/google"
+            version = "~> 1.0"
+            context = module.gcp_context.context
+          }
+          ```
+          EOF
+
+      - name: Update Table of Contents
+        run: |
+          echo "🔄 Updating table of contents..."
+          
+          # Update TOC for main documentation files
+          docs_files=(
+            "README.md"
+            "docs/user-guide.md"
+            "docs/architecture-decisions.md"
+            "docs/development-setup.md"
+            "CONTRIBUTING.md"
+          )
+          
+          for file in "${docs_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "📝 Updating TOC for: $file"
+              markdown-toc -i "$file" --maxdepth 3
+            fi
+          done
+
+      - name: Lint Documentation
+        run: |
+          echo "🔍 Linting documentation..."
+          
+          # Create markdownlint configuration
+          cat > .markdownlint.json << 'EOF'
+          {
+            "MD013": {
+              "line_length": 120,
+              "code_blocks": false,
+              "tables": false
+            },
+            "MD033": false,
+            "MD041": false
+          }
+          EOF
+          
+          # Lint all markdown files
+          markdownlint . --config .markdownlint.json --ignore node_modules --ignore .terraform || true
+
+      - name: Generate Documentation Index
+        run: |
+          echo "🔄 Generating documentation index..."
+          
+          cat > docs/index.md << 'EOF'
+          # Brockhoff Cloud Documentation Index
+          
+          Welcome to the comprehensive documentation for Brockhoff Cloud Terraform modules.
+          
+          ## Quick Start
+          - [Getting Started Tutorial](./tutorials/getting-started.md)
+          - [User Guide](./user-guide.md)
+          - [Installation Guide](../README.md#quick-start)
+          
+          ## Architecture & Design
+          - [Architecture Decisions](./architecture-decisions.md)
+          - [Design Principles](./design-principles.md)
+          - [Module Standards](./module-standards.md)
+          
+          ## Development
+          - [Development Setup](./development-setup.md)
+          - [Contributing Guidelines](../CONTRIBUTING.md)
+          - [Testing Guide](./testing.md)
+          - [Release Process](./release-process.md)
+          
+          ## Integration Guides
+          - [terraform-external-context Integration](./context-integration.md)
+          - [Self-Service Portal Setup](./portal-integration.md)
+          - [AI Agent Integration](./ai-integration.md)
+          - [Compliance Framework](./compliance.md)
+          
+          ## Cloud Provider Guides
+          - [AWS Best Practices](./aws-best-practices.md)
+          - [Azure Best Practices](./azure-best-practices.md)
+          - [GCP Best Practices](./gcp-best-practices.md)
+          
+          ## Operations
+          - [Cost Optimization](./cost-optimization.md)
+          - [Security Guidelines](./security.md)
+          - [Monitoring & Alerting](./monitoring.md)
+          - [Disaster Recovery](./disaster-recovery.md)
+          
+          ## API Reference
+          - [Module API Reference](./api/README.md)
+          - [Variable Reference](./api/variables.md)
+          - [Output Reference](./api/outputs.md)
+          
+          ## Examples
+          - [Basic Usage Examples](../examples/basic-usage/)
+          - [Advanced Usage Examples](../examples/advanced-usage/)
+          - [Multi-Cloud Examples](../examples/multi-cloud/)
+          - [Portal Integration Examples](../examples/portal-integration/)
+          
+          ## Support
+          - [Troubleshooting Guide](./troubleshooting.md)
+          - [FAQ](./faq.md)
+          - [Community Support](https://github.com/kbrockhoff/brockhoff-cloud-docs/discussions)
+          - [Professional Support](mailto:support@brockhoff.cloud)
+          
+          ---
+          
+          **Last Updated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Version:** $(git describe --tags --always)
+          EOF
+
+      - name: Check for Changes
+        id: changes
+        run: |
+          git add .
+          if git diff --staged --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No documentation changes detected"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Documentation changes detected"
+            git diff --staged --name-only
+          fi
+
+      - name: Commit Documentation Updates
+        if: steps.changes.outputs.has_changes == 'true' && github.event_name != 'pull_request'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git commit -m "docs: auto-update documentation
+          
+          - Updated terraform-docs for all modules
+          - Regenerated table of contents
+          - Updated documentation index
+          - Linted markdown files
+          
+          [skip ci]"
+          git push
+
+      - name: Create Pull Request for Documentation Updates
+        if: steps.changes.outputs.has_changes == 'true' && github.event_name == 'pull_request'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            docs: auto-update documentation
+            
+            - Updated terraform-docs for all modules
+            - Regenerated table of contents
+            - Updated documentation index
+            - Linted markdown files
+          title: 'docs: Auto-update documentation'
+          body: |
+            ## Documentation Updates
+            
+            This PR contains automatically generated documentation updates:
+            
+            - ✅ Updated terraform-docs for all modules
+            - ✅ Regenerated table of contents for documentation files
+            - ✅ Updated documentation index
+            - ✅ Linted markdown files for consistency
+            
+            ### Changes Made
+            
+            The following files were updated:
+            
+            ```
+            $(git diff --staged --name-only | head -20)
+            ```
+            
+            ### Review Notes
+            
+            - All changes are automatically generated
+            - No manual review required unless there are formatting issues
+            - Safe to merge after CI passes
+            
+            ---
+            
+            *This PR was automatically created by the documentation workflow.*
+          branch: docs/auto-update-${{ github.run_number }}
+          delete-branch: true
+
+  validate-docs:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Documentation Tools
+        run: |
+          npm install -g markdownlint-cli
+          npm install -g markdown-link-check
+          npm install -g alex
+
+      - name: Lint Markdown Files
+        run: |
+          # Create markdownlint configuration
+          cat > .markdownlint.json << 'EOF'
+          {
+            "MD013": {
+              "line_length": 120,
+              "code_blocks": false,
+              "tables": false
+            },
+            "MD033": false,
+            "MD041": false,
+            "MD024": false
+          }
+          EOF
+          
+          markdownlint . --config .markdownlint.json --ignore node_modules --ignore .terraform
+
+      - name: Check Markdown Links
+        run: |
+          # Create link check configuration
+          cat > .markdown-link-check.json << 'EOF'
+          {
+            "ignorePatterns": [
+              {
+                "pattern": "^http://localhost"
+              },
+              {
+                "pattern": "^https://registry.terraform.io"
+              }
+            ],
+            "timeout": "20s",
+            "retryOn429": true,
+            "retryCount": 3,
+            "fallbackRetryDelay": "30s",
+            "aliveStatusCodes": [200, 206]
+          }
+          EOF
+          
+          # Check links in documentation files
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.terraform/*" | \
+            xargs markdown-link-check --config .markdown-link-check.json
+
+      - name: Check Inclusive Language
+        run: |
+          # Check for inclusive language using alex
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.terraform/*" | \
+            xargs alex --why || true
+
+      - name: Validate Documentation Structure
+        run: |
+          echo "🔍 Validating documentation structure..."
+          
+          # Check for required documentation files
+          required_files=(
+            "README.md"
+            "CONTRIBUTING.md"
+            "LICENSE"
+            "CHANGELOG.md"
+            "docs/README.md"
+            "docs/user-guide.md"
+            "docs/architecture-decisions.md"
+            "docs/development-setup.md"
+          )
+          
+          missing_files=()
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              missing_files+=("$file")
+            fi
+          done
+          
+          if [ ${#missing_files[@]} -ne 0 ]; then
+            echo "❌ Missing required documentation files:"
+            printf '%s\n' "${missing_files[@]}"
+            exit 1
+          fi
+          
+          echo "✅ All required documentation files present"
+
+      - name: Check Documentation Completeness
+        run: |
+          echo "🔍 Checking documentation completeness..."
+          
+          # Check that all modules have README files
+          find . -name "main.tf" -exec dirname {} \; | sort -u | while read dir; do
+            if [[ "$dir" == *"/.terraform"* ]] || [[ "$dir" == */".git"* ]]; then
+              continue
+            fi
+            
+            if [ ! -f "$dir/README.md" ]; then
+              echo "❌ Missing README.md in module directory: $dir"
+              exit 1
+            fi
+          done
+          
+          # Check that all examples have README files
+          if [ -d "examples" ]; then
+            find examples -mindepth 1 -maxdepth 1 -type d | while read example_dir; do
+              if [ ! -f "$example_dir/README.md" ]; then
+                echo "❌ Missing README.md in example directory: $example_dir"
+                exit 1
+              fi
+            done
+          fi
+          
+          echo "✅ Documentation completeness check passed"
+
+  publish-docs:
+    name: Publish Documentation Site
+    runs-on: ubuntu-latest
+    needs: [generate-docs, validate-docs]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      pages: write
+      id-token: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Build Documentation Site
+        run: |
+          echo "🔄 Building documentation site..."
+          
+          # Create site directory
+          mkdir -p _site
+          
+          # Copy documentation files
+          cp -r docs/* _site/
+          cp README.md _site/index.md
+          cp CONTRIBUTING.md _site/contributing.md
+          cp CHANGELOG.md _site/changelog.md
+          
+          # Copy examples
+          if [ -d "examples" ]; then
+            cp -r examples _site/
+          fi
+          
+          # Create simple HTML wrapper for better navigation
+          cat > _site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Brockhoff Cloud Documentation</title>
+              <style>
+                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; }
+                  .container { max-width: 1200px; margin: 0 auto; }
+                  .header { text-align: center; margin-bottom: 40px; }
+                  .nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+                  .nav-item { padding: 20px; border: 1px solid #ddd; border-radius: 8px; text-decoration: none; color: inherit; }
+                  .nav-item:hover { background-color: #f5f5f5; }
+                  .nav-item h3 { margin: 0 0 10px 0; color: #0366d6; }
+                  .nav-item p { margin: 0; color: #666; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="header">
+                      <h1>🌟 Brockhoff Cloud Documentation</h1>
+                      <p>Comprehensive Terraform modules for multi-cloud infrastructure</p>
+                  </div>
+                  
+                  <div class="nav">
+                      <a href="user-guide.html" class="nav-item">
+                          <h3>📚 User Guide</h3>
+                          <p>Complete guide for using Brockhoff Cloud modules</p>
+                      </a>
+                      
+                      <a href="tutorials/getting-started.html" class="nav-item">
+                          <h3>🚀 Getting Started</h3>
+                          <p>Step-by-step tutorial for your first deployment</p>
+                      </a>
+                      
+                      <a href="architecture-decisions.html" class="nav-item">
+                          <h3>🏗️ Architecture</h3>
+                          <p>Architectural decisions and design principles</p>
+                      </a>
+                      
+                      <a href="development-setup.html" class="nav-item">
+                          <h3>🛠️ Development</h3>
+                          <p>Setup guide for contributors and developers</p>
+                      </a>
+                      
+                      <a href="api/" class="nav-item">
+                          <h3>📖 API Reference</h3>
+                          <p>Complete API documentation for all modules</p>
+                      </a>
+                      
+                      <a href="examples/" class="nav-item">
+                          <h3>💡 Examples</h3>
+                          <p>Real-world usage examples and patterns</p>
+                      </a>
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4

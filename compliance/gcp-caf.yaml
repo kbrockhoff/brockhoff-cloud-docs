@@ -1,0 +1,319 @@
+# Google Cloud Architecture Framework Compliance Mapping
+# This file maps module implementations to Google Cloud Architecture Framework principles and best practices
+
+framework:
+  name: "Google Cloud Architecture Framework"
+  version: "2023"
+  url: "https://cloud.google.com/architecture/framework"
+
+pillars:
+  operational_excellence:
+    description: "Design, build, and run workloads effectively"
+    controls:
+      - id: "OE01"
+        title: "Design for Automation"
+        implementation: "Infrastructure as Code with Cloud Build integration"
+        evidence_fields:
+          - "google_project.main.project_id"
+          - "local.module_metadata"
+          - "google_logging_project_sink.main.id"
+        validation_checks:
+          - "All resources deployed via Terraform"
+          - "Cloud Logging configured"
+          - "Resource labels applied consistently"
+        
+      - id: "OE02"
+        title: "Choose the Right Tools"
+        implementation: "GCP-native services and managed solutions"
+        evidence_fields:
+          - "google_cloud_run_service.main.*.id"
+          - "google_kubernetes_engine_cluster.main.id"
+          - "google_sql_database_instance.main.id"
+        validation_checks:
+          - "Managed services preferred over self-managed"
+          - "Serverless options utilized where appropriate"
+        
+      - id: "OE03"
+        title: "Implement Observability"
+        implementation: "Comprehensive monitoring with Cloud Operations"
+        evidence_fields:
+          - "google_monitoring_dashboard.main.id"
+          - "google_logging_metric.main.*.id"
+          - "google_monitoring_alert_policy.main.*.id"
+        validation_checks:
+          - "Cloud Monitoring dashboards configured"
+          - "Custom metrics and alerts defined"
+          - "Error reporting enabled"
+        
+      - id: "OE04"
+        title: "Optimize for Performance"
+        implementation: "Performance monitoring and optimization"
+        evidence_fields:
+          - "google_compute_autoscaler.main.id"
+          - "google_cloud_scheduler_job.optimization.*.id"
+        validation_checks:
+          - "Auto-scaling configured"
+          - "Performance optimization scheduled"
+
+  security:
+    description: "Protect your data and systems"
+    controls:
+      - id: "SE01"
+        title: "Identity and Access Management"
+        implementation: "IAM with least privilege and identity-aware access"
+        evidence_fields:
+          - "google_project_iam_binding.main.*.role"
+          - "google_service_account.main.email"
+          - "google_iap_web_iam_binding.main.*.role"
+        validation_checks:
+          - "IAM roles follow least privilege"
+          - "Service accounts used for workload identity"
+          - "Identity-Aware Proxy configured for sensitive resources"
+        
+      - id: "SE02"
+        title: "Resource Hierarchy and Organization"
+        implementation: "Proper resource organization and policy inheritance"
+        evidence_fields:
+          - "google_folder.main.id"
+          - "google_organization_policy.main.*.constraint"
+          - "google_project.main.org_id"
+        validation_checks:
+          - "Resource hierarchy properly structured"
+          - "Organization policies enforced"
+        
+      - id: "SE03"
+        title: "Network Security"
+        implementation: "VPC security and network controls"
+        evidence_fields:
+          - "google_compute_firewall.main.*.id"
+          - "google_compute_security_policy.main.id"
+          - "google_compute_ssl_policy.main.id"
+        validation_checks:
+          - "Firewall rules follow least privilege"
+          - "Cloud Armor security policies active"
+          - "SSL policies enforce strong encryption"
+        
+      - id: "SE04"
+        title: "Data Protection"
+        implementation: "Encryption at rest and in transit"
+        evidence_fields:
+          - "google_kms_crypto_key.main.id"
+          - "google_storage_bucket.main.encryption"
+          - "google_sql_database_instance.main.encryption_key_name"
+        validation_checks:
+          - "Customer-managed encryption keys used"
+          - "Encryption at rest enabled for all data stores"
+          - "TLS encryption enforced for all connections"
+        
+      - id: "SE05"
+        title: "Detection and Response"
+        implementation: "Security monitoring and incident response"
+        evidence_fields:
+          - "google_security_center_source.main.id"
+          - "google_cloud_asset_project_feed.security.id"
+        validation_checks:
+          - "Security Command Center enabled"
+          - "Asset inventory monitoring active"
+
+  reliability:
+    description: "Build resilient systems"
+    controls:
+      - id: "RE01"
+        title: "Design for Scale"
+        implementation: "Horizontal scaling and load distribution"
+        evidence_fields:
+          - "google_compute_instance_group_manager.main.id"
+          - "google_compute_global_forwarding_rule.main.id"
+          - "google_compute_backend_service.main.load_balancing_scheme"
+        validation_checks:
+          - "Managed instance groups configured"
+          - "Global load balancing enabled"
+          - "Multi-region deployment active"
+        
+      - id: "RE02"
+        title: "Plan for Failure"
+        implementation: "Fault tolerance and disaster recovery"
+        evidence_fields:
+          - "google_compute_instance_template.main.scheduling"
+          - "google_sql_database_instance.main.replica_configuration"
+          - "google_storage_bucket.main.versioning"
+        validation_checks:
+          - "Preemptible instances handled gracefully"
+          - "Database replicas configured"
+          - "Data versioning and backup enabled"
+        
+      - id: "RE03"
+        title: "Design for Recovery"
+        implementation: "Backup and disaster recovery procedures"
+        evidence_fields:
+          - "google_compute_snapshot_schedule.main.id"
+          - "google_sql_backup_run.main.id"
+          - "local.effective_config.rpo_hours"
+        validation_checks:
+          - "Automated snapshot schedules active"
+          - "Database backup retention configured"
+          - "RTO/RPO requirements met"
+        
+      - id: "RE04"
+        title: "Test and Validate"
+        implementation: "Chaos engineering and resilience testing"
+        evidence_fields:
+          - "google_cloud_scheduler_job.chaos_test.*.id"
+          - "local.resilience_testing_config"
+        validation_checks:
+          - "Resilience testing scheduled"
+          - "Failure scenarios documented"
+
+  performance_efficiency:
+    description: "Optimize for speed and efficiency"
+    controls:
+      - id: "PE01"
+        title: "Optimize Compute"
+        implementation: "Right-sized compute with auto-scaling"
+        evidence_fields:
+          - "google_compute_instance.main.*.machine_type"
+          - "google_compute_autoscaler.main.autoscaling_policy"
+          - "google_container_cluster.main.node_pool"
+        validation_checks:
+          - "Machine types appropriate for workload"
+          - "Auto-scaling policies configured"
+          - "Node pools optimized"
+        
+      - id: "PE02"
+        title: "Optimize Storage"
+        implementation: "Storage class optimization and caching"
+        evidence_fields:
+          - "google_storage_bucket.main.storage_class"
+          - "google_redis_instance.main.id"
+          - "google_compute_disk.main.*.type"
+        validation_checks:
+          - "Storage classes match access patterns"
+          - "Caching layers implemented"
+          - "Disk types optimized for IOPS/throughput"
+        
+      - id: "PE03"
+        title: "Optimize Network"
+        implementation: "Network optimization and content delivery"
+        evidence_fields:
+          - "google_compute_global_forwarding_rule.main.load_balancing_scheme"
+          - "google_compute_url_map.main.id"
+          - "google_cdn_backend_service.main.*.id"
+        validation_checks:
+          - "Global load balancing configured"
+          - "CDN enabled for static content"
+          - "Network proximity optimized"
+        
+      - id: "PE04"
+        title: "Monitor and Optimize"
+        implementation: "Performance monitoring and continuous optimization"
+        evidence_fields:
+          - "google_monitoring_metric_descriptor.performance.*.id"
+          - "google_cloud_scheduler_job.performance_optimization.*.id"
+        validation_checks:
+          - "Performance metrics monitored"
+          - "Automated optimization enabled"
+
+  cost_optimization:
+    description: "Optimize costs while meeting requirements"
+    controls:
+      - id: "CO01"
+        title: "Plan and Control Costs"
+        implementation: "Budget monitoring and cost allocation"
+        evidence_fields:
+          - "google_billing_budget.main.id"
+          - "module.pricing.monthly_cost_estimate"
+          - "local.cost_allocation_labels"
+        validation_checks:
+          - "Billing budgets configured"
+          - "Cost allocation labels applied"
+        
+      - id: "CO02"
+        title: "Optimize Resource Usage"
+        implementation: "Resource rightsizing and utilization optimization"
+        evidence_fields:
+          - "local.cost_optimization_recommendations"
+          - "google_compute_instance.main.*.scheduling"
+        validation_checks:
+          - "Preemptible instances used where appropriate"
+          - "Resource utilization monitored"
+        
+      - id: "CO03"
+        title: "Use Managed Services"
+        implementation: "Managed services to reduce operational overhead"
+        evidence_fields:
+          - "google_cloud_run_service.main.*.id"
+          - "google_app_engine_application.main.id"
+          - "google_functions_function.main.*.id"
+        validation_checks:
+          - "Serverless options utilized"
+          - "Managed services preferred"
+        
+      - id: "CO04"
+        title: "Optimize Data Storage"
+        implementation: "Storage lifecycle management and optimization"
+        evidence_fields:
+          - "google_storage_bucket.main.lifecycle_rule"
+          - "google_bigquery_dataset.main.default_table_expiration_ms"
+        validation_checks:
+          - "Storage lifecycle policies configured"
+          - "Data retention policies enforced"
+
+# Google Cloud-specific compliance features
+gcp_specific:
+  governance:
+    - id: "GOV01"
+      title: "Organization Policy Compliance"
+      implementation: "Policy-driven governance and compliance"
+      evidence_fields:
+        - "google_organization_policy.main.*.constraint"
+        - "google_folder_organization_policy.main.*.constraint"
+      validation_checks:
+        - "Required organization policies enforced"
+        - "Policy compliance monitored"
+    
+    - id: "GOV02"
+      title: "Resource Labeling and Organization"
+      implementation: "Consistent resource labeling and hierarchy"
+      evidence_fields:
+        - "google_project.main.labels"
+        - "google_compute_instance.main.*.labels"
+      validation_checks:
+        - "Resource labeling enforced"
+        - "Project hierarchy organized"
+  
+  sustainability:
+    - id: "SUS01"
+      title: "Carbon Footprint Optimization"
+      implementation: "Sustainable computing practices"
+      evidence_fields:
+        - "google_compute_instance.main.*.zone"
+        - "local.carbon_footprint_optimization"
+      validation_checks:
+        - "Low-carbon regions preferred"
+        - "Sustainable computing practices implemented"
+
+# Compliance assessment configuration
+assessment:
+  scoring:
+    method: "weighted"
+    weights:
+      operational_excellence: 0.2
+      security: 0.3
+      reliability: 0.2
+      performance_efficiency: 0.15
+      cost_optimization: 0.15
+  
+  thresholds:
+    production:
+      minimum_score: 0.85
+      required_controls: ["SE01", "SE02", "SE03", "SE04", "RE01", "RE02", "RE03", "GOV01"]
+    development:
+      minimum_score: 0.70
+      required_controls: ["SE01", "SE04", "GOV01"]
+  
+  reporting:
+    format: "json"
+    include_evidence: true
+    include_recommendations: true
+    gcp_specific: true
+    sustainability_metrics: true

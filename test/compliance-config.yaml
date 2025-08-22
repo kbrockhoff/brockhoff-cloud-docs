@@ -1,0 +1,260 @@
+# Compliance Testing Configuration
+# This file defines the compliance testing framework for Brockhoff Cloud Terraform modules
+
+compliance_testing:
+  version: "1.0"
+  description: "Compliance testing configuration for multi-cloud terraform modules"
+  
+  # Supported compliance frameworks
+  frameworks:
+    aws-waf:
+      name: "AWS Well-Architected Framework"
+      version: "2023"
+      file: "../compliance/aws-waf.yaml"
+      cloud_provider: "aws"
+      required_score: 0.7
+      
+    azure-waf:
+      name: "Azure Well-Architected Framework"
+      version: "2023"
+      file: "../compliance/azure-waf.yaml"
+      cloud_provider: "azure"
+      required_score: 0.7
+      
+    gcp-caf:
+      name: "Google Cloud Architecture Framework"
+      version: "2023"
+      file: "../compliance/gcp-caf.yaml"
+      cloud_provider: "gcp"
+      required_score: 0.7
+
+  # Test categories and their weights
+  test_categories:
+    security:
+      weight: 0.3
+      required_score: 0.8
+      tests:
+        - encryption_at_rest
+        - encryption_in_transit
+        - access_controls
+        - network_security
+        - security_monitoring
+        - vulnerability_management
+        
+    cost_optimization:
+      weight: 0.2
+      required_score: 0.7
+      tests:
+        - cost_monitoring
+        - right_sizing
+        - resource_scheduling
+        - budget_controls
+        - cost_allocation
+        - optimization_recommendations
+        
+    reliability:
+      weight: 0.2
+      required_score: 0.7
+      tests:
+        - fault_tolerance
+        - backup_recovery
+        - health_monitoring
+        - auto_scaling
+        - disaster_recovery
+        - availability_zones
+        
+    performance:
+      weight: 0.15
+      required_score: 0.6
+      tests:
+        - performance_monitoring
+        - resource_optimization
+        - caching
+        - load_balancing
+        - auto_scaling
+        - capacity_planning
+        
+    operational_excellence:
+      weight: 0.15
+      required_score: 0.6
+      tests:
+        - monitoring_observability
+        - automation
+        - documentation
+        - version_control
+        - change_management
+        - incident_response
+
+  # Evidence patterns for automated validation
+  evidence_patterns:
+    encryption_at_rest:
+      - "kms_key"
+      - "server_side_encryption"
+      - "encryption_configuration"
+      - "encrypted = true"
+      
+    encryption_in_transit:
+      - "ssl_policy"
+      - "https"
+      - "tls"
+      - "certificate"
+      
+    access_controls:
+      - "iam_policy"
+      - "iam_role"
+      - "policy_document"
+      - "rbac"
+      
+    network_security:
+      - "security_group"
+      - "network_acl"
+      - "firewall"
+      - "vpc"
+      
+    monitoring:
+      - "cloudwatch"
+      - "monitoring"
+      - "metrics"
+      - "alarms"
+      - "dashboard"
+      
+    cost_monitoring:
+      - "budget"
+      - "cost_allocation"
+      - "billing"
+      - "pricing"
+      
+    backup_recovery:
+      - "backup"
+      - "snapshot"
+      - "recovery"
+      - "restore"
+      
+    auto_scaling:
+      - "auto_scaling"
+      - "scaling_policy"
+      - "target_group"
+      
+    documentation:
+      - "README.md"
+      - "variables.tf"
+      - "outputs.tf"
+      - "description"
+
+  # Module-specific overrides
+  module_overrides:
+    "modules/context-validation":
+      frameworks: ["aws-waf", "azure-waf", "gcp-caf"]
+      required_score: 0.8
+      
+    "modules/compliance-reporting":
+      frameworks: ["aws-waf", "azure-waf", "gcp-caf"]
+      required_score: 0.9
+      categories:
+        governance:
+          weight: 0.4
+          
+    "examples/*":
+      required_score: 0.6
+      skip_categories: ["operational_excellence"]
+
+  # Reporting configuration
+  reporting:
+    output_directory: "compliance-reports"
+    formats: ["json", "html", "markdown"]
+    include_evidence: true
+    include_recommendations: true
+    
+    # Report sections
+    sections:
+      - executive_summary
+      - framework_assessment
+      - pillar_breakdown
+      - control_details
+      - recommendations
+      - evidence_artifacts
+      
+    # Thresholds for report status
+    thresholds:
+      excellent: 0.9
+      good: 0.8
+      acceptable: 0.7
+      needs_improvement: 0.6
+
+  # Integration settings
+  integration:
+    ci_cd:
+      fail_on_score_below: 0.7
+      generate_artifacts: true
+      upload_reports: true
+      
+    notifications:
+      slack_webhook: "${SLACK_WEBHOOK_URL}"
+      email_recipients: []
+      
+    external_tools:
+      tfsec: true
+      checkov: true
+      terrascan: true
+      
+  # Validation rules
+  validation_rules:
+    # File structure validation
+    required_files:
+      - "main.tf"
+      - "variables.tf"
+      - "outputs.tf"
+      - "versions.tf"
+      - "README.md"
+      
+    # Naming conventions
+    naming_patterns:
+      variables: "^[a-z][a-z0-9_]*$"
+      outputs: "^[a-z][a-z0-9_]*$"
+      resources: "^[a-z][a-z0-9_]*$"
+      
+    # Content requirements
+    content_requirements:
+      variables_must_have_descriptions: true
+      outputs_must_have_descriptions: true
+      resources_must_have_tags: true
+      
+    # Security requirements
+    security_requirements:
+      no_hardcoded_secrets: true
+      no_public_access_by_default: true
+      encryption_required: true
+      
+  # Custom validation functions
+  custom_validators:
+    - name: "validate_brockhoff_standards"
+      description: "Validates Brockhoff Cloud specific standards"
+      script: "scripts/validate-brockhoff-standards.py"
+      
+    - name: "validate_cost_estimation"
+      description: "Validates cost estimation implementation"
+      script: "scripts/validate-cost-estimation.py"
+      
+    - name: "validate_multi_cloud_compatibility"
+      description: "Validates multi-cloud compatibility"
+      script: "scripts/validate-multi-cloud.py"
+
+# Test execution configuration
+execution:
+  parallel: true
+  timeout: "30m"
+  retry_count: 2
+  
+  # Test environment
+  environment:
+    TF_VERSION: "1.6.0"
+    TF_LOG: "ERROR"
+    AWS_DEFAULT_REGION: "us-east-1"
+    AZURE_LOCATION: "East US"
+    GCP_REGION: "us-central1"
+    
+  # Resource limits
+  limits:
+    max_concurrent_tests: 10
+    memory_limit: "2Gi"
+    cpu_limit: "1000m"

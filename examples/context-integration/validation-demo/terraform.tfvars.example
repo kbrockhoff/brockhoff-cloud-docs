@@ -1,0 +1,75 @@
+# Context Validation Demo - Example Variables
+
+# Global Configuration
+namespace   = "myorg"
+environment = "dev"
+name        = "validation"
+
+tags = {
+  Project     = "ContextValidation"
+  Owner       = "DevTeam"
+  Purpose     = "Demo"
+  CostCenter  = "Engineering"
+}
+
+environment_type = "Development"
+
+# Validation Control
+enable_aws_validation   = true
+enable_azure_validation = false  # Set to true if you have Azure credentials
+enable_gcp_validation   = false  # Set to true if you have GCP credentials
+enable_auto_detection   = true
+
+enforce_cross_cloud_compatibility = true
+
+# Resource Creation (set to true to create actual resources for testing)
+create_demo_resources = false
+
+# Cloud Provider Configuration
+aws_region     = "us-east-1"
+azure_region   = "East US"
+gcp_project_id = null  # Set to your GCP project ID if using GCP
+gcp_region     = "us-central1"
+
+# Testing Scenarios
+test_invalid_names = false
+
+test_name_scenarios = {
+  valid_short   = "app"
+  valid_long    = "my-application-name"
+  invalid_aws   = "-invalid-aws-name-"
+  invalid_azure = "invalid azure name with spaces"
+  invalid_gcp   = "Invalid-GCP-Name-With-Uppercase"
+  too_long      = "this-is-an-extremely-long-name-that-exceeds-all-cloud-provider-limits"
+}
+
+# Example configurations for different scenarios:
+
+# Scenario 1: Cross-cloud compatible configuration
+# namespace   = "myorg"
+# environment = "prod"
+# name        = "webapp"
+# enforce_cross_cloud_compatibility = true
+
+# Scenario 2: AWS-specific configuration
+# namespace   = "MyOrganization"
+# environment = "Production"
+# name        = "WebApplication"
+# enable_aws_validation = true
+# enable_azure_validation = false
+# enable_gcp_validation = false
+
+# Scenario 3: Multi-cloud configuration
+# namespace   = "myorg"
+# environment = "prod"
+# name        = "webapp"
+# enable_aws_validation = true
+# enable_azure_validation = true
+# enable_gcp_validation = true
+# enforce_cross_cloud_compatibility = true
+
+# Scenario 4: Testing invalid configurations (will cause validation errors)
+# namespace   = "very-long-organization-name-that-exceeds-limits"
+# environment = "production-environment-with-long-name"
+# name        = "extremely-long-application-name-that-will-fail"
+# test_invalid_names = true

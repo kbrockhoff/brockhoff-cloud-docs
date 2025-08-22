@@ -1,0 +1,292 @@
+# AI Agent Integration Metadata Schema
+# This schema defines the structure for ai-metadata.yaml files in Terraform modules
+# to enable AI agents to understand, generate, and validate module usage
+
+schema_version: "1.0"
+description: "Machine-readable metadata schema for AI agent integration with Terraform modules"
+
+# Schema definition for ai-metadata.yaml files
+metadata_schema:
+  required_fields:
+    - schema_version
+    - module_info
+    - generation_templates
+    - validation_rules
+    - integration_points
+    - cost_estimation
+    - testing_scenarios
+  
+  optional_fields:
+    - common_patterns
+    - troubleshooting_guide
+    - performance_hints
+    - security_considerations
+
+# Field definitions and validation rules
+field_definitions:
+  schema_version:
+    type: string
+    pattern: "^\\d+\\.\\d+$"
+    description: "Version of the AI metadata schema being used"
+    example: "1.0"
+  
+  module_info:
+    type: object
+    required_fields:
+      - name
+      - type
+      - complexity_level
+      - cloud_providers
+      - category
+    properties:
+      name:
+        type: string
+        pattern: "^[a-z0-9-]+$"
+        description: "Module name in kebab-case"
+      type:
+        type: string
+        enum: ["foundation", "service", "composite"]
+        description: "Module tier in the architecture"
+      complexity_level:
+        type: string
+        enum: ["beginner", "intermediate", "advanced", "expert"]
+        description: "Complexity level for AI agents to understand implementation difficulty"
+      cloud_providers:
+        type: array
+        items:
+          type: string
+          enum: ["aws", "azure", "gcp"]
+        description: "Supported cloud providers"
+      category:
+        type: string
+        enum: ["compute", "storage", "networking", "security", "database", "monitoring", "identity"]
+        description: "Primary category of infrastructure component"
+      description:
+        type: string
+        description: "Brief description of module functionality"
+      estimated_deployment_time:
+        type: string
+        pattern: "^\\d+-\\d+ minutes$"
+        description: "Expected deployment time range"
+  
+  generation_templates:
+    type: object
+    description: "Jinja2 templates for common usage patterns"
+    required_fields:
+      - basic_usage
+    properties:
+      basic_usage:
+        type: string
+        description: "Template for basic module usage"
+      advanced_usage:
+        type: string
+        description: "Template for advanced configuration"
+      multi_cloud:
+        type: string
+        description: "Template for multi-cloud deployment"
+      production_ready:
+        type: string
+        description: "Template for production-grade deployment"
+  
+  validation_rules:
+    type: array
+    description: "Input validation rules for AI-generated configurations"
+    items:
+      type: object
+      required_fields:
+        - field
+        - rule_type
+        - error_message
+      properties:
+        field:
+          type: string
+          description: "Variable name to validate"
+        rule_type:
+          type: string
+          enum: ["pattern", "allowed_values", "range", "dependency", "custom"]
+        pattern:
+          type: string
+          description: "Regex pattern for pattern validation"
+        allowed_values:
+          type: array
+          description: "List of allowed values"
+        min_value:
+          type: number
+          description: "Minimum value for range validation"
+        max_value:
+          type: number
+          description: "Maximum value for range validation"
+        depends_on:
+          type: array
+          items:
+            type: string
+          description: "List of required fields for dependency validation"
+        custom_validation:
+          type: string
+          description: "Custom validation logic description"
+        error_message:
+          type: string
+          description: "Human-readable error message"
+        severity:
+          type: string
+          enum: ["error", "warning", "info"]
+          default: "error"
+        remediation:
+          type: string
+          description: "Suggested fix for the validation error"
+  
+  common_patterns:
+    type: array
+    description: "Pre-defined configuration patterns for common use cases"
+    items:
+      type: object
+      required_fields:
+        - pattern_name
+        - description
+        - template_variables
+      properties:
+        pattern_name:
+          type: string
+          pattern: "^[a-z0-9_]+$"
+          description: "Unique identifier for the pattern"
+        description:
+          type: string
+          description: "Human-readable description of the pattern"
+        use_case:
+          type: string
+          description: "When to use this pattern"
+        template_variables:
+          type: object
+          description: "Default variable values for this pattern"
+        estimated_cost:
+          type: string
+          enum: ["very_low", "low", "medium", "high", "very_high"]
+          description: "Relative cost estimate for this pattern"
+  
+  integration_points:
+    type: array
+    description: "How this module integrates with other modules"
+    items:
+      type: object
+      required_fields:
+        - module
+        - connection_type
+      properties:
+        module:
+          type: string
+          description: "Name of the related module"
+        connection_type:
+          type: string
+          enum: ["dependency", "reference", "composition", "optional"]
+        required_outputs:
+          type: array
+          items:
+            type: string
+          description: "Required outputs from the related module"
+        optional_outputs:
+          type: array
+          items:
+            type: string
+          description: "Optional outputs that enhance functionality"
+        integration_example:
+          type: string
+          description: "Code example showing integration"
+  
+  cost_estimation:
+    type: object
+    description: "Cost estimation parameters for AI budget planning"
+    properties:
+      base_cost_per_hour:
+        type: number
+        description: "Base hourly cost in USD"
+      base_cost_per_month:
+        type: number
+        description: "Base monthly cost in USD"
+      scaling_factors:
+        type: object
+        description: "Cost multipliers based on configuration"
+      cost_variables:
+        type: array
+        items:
+          type: object
+          properties:
+            variable:
+              type: string
+            impact:
+              type: string
+              enum: ["linear", "exponential", "logarithmic", "step"]
+            multiplier:
+              type: number
+      cost_optimization_hints:
+        type: array
+        items:
+          type: string
+        description: "Tips for reducing costs"
+  
+  testing_scenarios:
+    type: array
+    description: "Test scenarios for validating AI-generated configurations"
+    items:
+      type: object
+      required_fields:
+        - name
+        - variables
+        - expected_outcome
+      properties:
+        name:
+          type: string
+          description: "Test scenario name"
+        description:
+          type: string
+          description: "What this test validates"
+        variables:
+          type: object
+          description: "Input variables for the test"
+        expected_outcome:
+          type: object
+          properties:
+            resource_count:
+              type: number
+            success:
+              type: boolean
+            validation_checks:
+              type: array
+              items:
+                type: string
+        cloud_provider:
+          type: string
+          enum: ["aws", "azure", "gcp", "all"]
+          default: "all"
+
+# Template validation rules
+template_validation:
+  required_variables:
+    - "{{ module_name }}"
+    - "{{ module_source }}"
+  
+  allowed_filters:
+    - "default"
+    - "terraform_format"
+    - "upper"
+    - "lower"
+    - "replace"
+  
+  security_rules:
+    - "No hardcoded secrets or credentials"
+    - "No direct resource ARNs or IDs"
+    - "Use variables for all configurable values"
+
+# Error message templates
+error_templates:
+  validation_failed: "Validation failed for field '{{ field }}': {{ error_message }}"
+  missing_required: "Required field '{{ field }}' is missing"
+  invalid_pattern: "Field '{{ field }}' does not match required pattern: {{ pattern }}"
+  invalid_value: "Field '{{ field }}' has invalid value '{{ value }}'. {{ remediation }}"
+  dependency_missing: "Field '{{ field }}' requires {{ dependencies }} to be set"
+  cost_exceeded: "Configuration exceeds budget limit. Estimated cost: ${{ cost }}/month. {{ optimization_hints }}"
+
+# Success message templates
+success_templates:
+  validation_passed: "All validations passed successfully"
+  cost_optimized: "Configuration is cost-optimized. Estimated cost: ${{ cost }}/month"
+  best_practices: "Configuration follows best practices for {{ cloud_provider }}"

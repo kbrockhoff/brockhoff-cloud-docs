@@ -1,0 +1,316 @@
+schema_version: "1.0"
+
+module_info:
+  name: "web-application"
+  version: "1.0.0"
+  description: "Deploy a scalable web application with load balancer, auto-scaling, and monitoring"
+  category: "compute"
+  cloud_providers: ["aws", "azure", "gcp"]
+  tags: ["web", "scalable", "production-ready", "monitoring"]
+
+portal_config:
+  deployment_time: "10-15 minutes"
+  complexity_level: "intermediate"
+  user_personas: ["developer", "devops_engineer"]
+  use_cases:
+    - "Production web application deployment"
+    - "Scalable API backend"
+    - "Microservices hosting"
+
+form_schema:
+  sections:
+    - title: "Basic Configuration"
+      description: "Essential settings for your web application"
+      fields:
+        - name: "application_name"
+          type: "string"
+          label: "Application Name"
+          description: "Name for your web application (used in resource naming)"
+          required: true
+          placeholder: "my-web-app"
+          validation:
+            pattern: "^[a-z0-9-]+$"
+            minLength: 3
+            maxLength: 32
+          help_text: "Use lowercase letters, numbers, and hyphens only"
+
+        - name: "environment"
+          type: "select"
+          label: "Environment"
+          description: "Deployment environment (affects resource sizing and monitoring)"
+          required: true
+          default: "Development"
+          options:
+            - value: "Development"
+              label: "Development"
+              description: "Lower cost, basic monitoring"
+            - value: "Testing"
+              label: "Testing/Staging"
+              description: "Medium resources, enhanced monitoring"
+            - value: "Production"
+              label: "Production"
+              description: "High availability, full monitoring"
+            - value: "MissionCritical"
+              label: "Mission Critical"
+              description: "Maximum availability, comprehensive monitoring"
+
+        - name: "cloud_provider"
+          type: "select"
+          label: "Cloud Provider"
+          description: "Choose your preferred cloud provider"
+          required: true
+          options:
+            - value: "aws"
+              label: "Amazon Web Services (AWS)"
+              description: "Mature ecosystem, extensive services"
+            - value: "azure"
+              label: "Microsoft Azure"
+              description: "Strong enterprise integration"
+            - value: "gcp"
+              label: "Google Cloud Platform"
+              description: "Advanced analytics and ML capabilities"
+
+    - title: "Application Configuration"
+      description: "Configure your application settings"
+      fields:
+        - name: "instance_type"
+          type: "select"
+          label: "Instance Size"
+          description: "Choose instance size based on expected load"
+          required: true
+          default: "small"
+          options:
+            - value: "small"
+              label: "Small (1-2 vCPU, 2-4 GB RAM)"
+              description: "Good for development and light workloads"
+            - value: "medium"
+              label: "Medium (2-4 vCPU, 4-8 GB RAM)"
+              description: "Suitable for moderate traffic applications"
+            - value: "large"
+              label: "Large (4-8 vCPU, 8-16 GB RAM)"
+              description: "High traffic and resource-intensive applications"
+
+        - name: "min_instances"
+          type: "number"
+          label: "Minimum Instances"
+          description: "Minimum number of instances to run"
+          required: true
+          default: 1
+          validation:
+            min: 1
+            max: 10
+
+        - name: "max_instances"
+          type: "number"
+          label: "Maximum Instances"
+          description: "Maximum number of instances for auto-scaling"
+          required: true
+          default: 3
+          validation:
+            min: 1
+            max: 50
+
+        - name: "enable_https"
+          type: "boolean"
+          label: "Enable HTTPS"
+          description: "Enable SSL/TLS encryption (recommended for production)"
+          default: true
+
+        - name: "domain_name"
+          type: "string"
+          label: "Custom Domain"
+          description: "Optional custom domain name"
+          required: false
+          placeholder: "app.example.com"
+          conditional:
+            field: "enable_https"
+            operator: "equals"
+            value: true
+          validation:
+            pattern: "^[a-z0-9.-]+\\.[a-z]{2,}$"
+
+    - title: "Advanced Settings"
+      description: "Optional advanced configuration"
+      collapsible: true
+      fields:
+        - name: "enable_monitoring"
+          type: "boolean"
+          label: "Enable Enhanced Monitoring"
+          description: "Enable detailed application and infrastructure monitoring"
+          default: false
+
+        - name: "backup_retention_days"
+          type: "number"
+          label: "Backup Retention (Days)"
+          description: "Number of days to retain backups"
+          default: 7
+          validation:
+            min: 1
+            max: 365
+
+        - name: "custom_tags"
+          type: "map"
+          label: "Custom Tags"
+          description: "Additional tags for resource organization"
+          required: false
+          help_text: "Enter key-value pairs for custom resource tagging"
+
+cost_estimation:
+  base_cost_category: "medium"
+  estimated_monthly_cost:
+    min: 50
+    max: 500
+    typical: 150
+  cost_factors:
+    - factor: "Instance Size"
+      impact: "high"
+      description: "Larger instances significantly increase compute costs"
+    - factor: "Number of Instances"
+      impact: "high"
+      description: "Auto-scaling increases costs during high traffic"
+    - factor: "Data Transfer"
+      impact: "medium"
+      description: "Outbound data transfer charges apply"
+    - factor: "Load Balancer"
+      impact: "low"
+      description: "Fixed monthly cost for load balancer"
+  cost_optimization_tips:
+    - "Use smaller instances for development environments"
+    - "Configure auto-scaling to minimize idle instances"
+    - "Enable CloudFront/CDN to reduce data transfer costs"
+    - "Use reserved instances for predictable workloads"
+
+difficulty_assessment:
+  overall_difficulty: 3
+  skill_requirements:
+    terraform_experience: "basic"
+    cloud_experience: "intermediate"
+    networking_knowledge: "basic"
+    security_knowledge: "basic"
+  complexity_factors:
+    - factor: "Multi-cloud Support"
+      level: "medium"
+      description: "Understanding cloud provider differences"
+    - factor: "Auto-scaling Configuration"
+      level: "medium"
+      description: "Configuring appropriate scaling policies"
+    - factor: "Load Balancer Setup"
+      level: "low"
+      description: "Standard load balancer configuration"
+    - factor: "SSL Certificate Management"
+      level: "medium"
+      description: "Managing SSL certificates and domain validation"
+
+prerequisites:
+  required_modules:
+    - module_name: "kbrockhoff/external-context/terraform"
+      version_constraint: ">= 1.0.0"
+      description: "Provides consistent naming and tagging across cloud providers"
+    - module_name: "kbrockhoff/networking/terraform"
+      version_constraint: ">= 1.0.0"
+      description: "Creates VPC/VNet and networking infrastructure"
+
+  cloud_resources:
+    - resource_type: "VPC/Virtual Network"
+      provider: "aws"
+      description: "Virtual Private Cloud for network isolation"
+      setup_instructions: "Deploy the networking module first or use existing VPC"
+    - resource_type: "Resource Group"
+      provider: "azure"
+      description: "Resource group for organizing Azure resources"
+      setup_instructions: "Create resource group or use existing one"
+    - resource_type: "Project"
+      provider: "gcp"
+      description: "GCP project for resource organization"
+      setup_instructions: "Ensure GCP project exists and billing is enabled"
+
+  permissions:
+    - permission: "EC2FullAccess, ELBFullAccess, AutoScalingFullAccess"
+      provider: "aws"
+      description: "Required for creating compute and load balancing resources"
+    - permission: "Contributor"
+      provider: "azure"
+      description: "Required for creating and managing Azure resources"
+    - permission: "Compute Admin, Network Admin"
+      provider: "gcp"
+      description: "Required for creating compute and networking resources"
+
+  tools:
+    - tool_name: "terraform"
+      version_constraint: ">= 1.0"
+      installation_url: "https://terraform.io/downloads"
+    - tool_name: "aws-cli"
+      version_constraint: ">= 2.0"
+      installation_url: "https://aws.amazon.com/cli/"
+
+dependencies:
+  module_dependencies:
+    - module_name: "kbrockhoff/networking/terraform"
+      relationship_type: "required"
+      integration_points: ["vpc_id", "subnet_ids", "security_group_id"]
+      description: "Provides network infrastructure for the web application"
+    - module_name: "kbrockhoff/monitoring/terraform"
+      relationship_type: "optional"
+      integration_points: ["monitoring_enabled", "log_group_name"]
+      description: "Enhanced monitoring and alerting capabilities"
+    - module_name: "kbrockhoff/security/terraform"
+      relationship_type: "recommended"
+      integration_points: ["security_group_rules", "iam_policies"]
+      description: "Additional security hardening and compliance"
+
+  deployment_order:
+    - step: 1
+      modules: ["kbrockhoff/external-context/terraform"]
+      description: "Set up naming and tagging context"
+    - step: 2
+      modules: ["kbrockhoff/networking/terraform"]
+      description: "Create network infrastructure"
+    - step: 3
+      modules: ["kbrockhoff/web-application/terraform"]
+      description: "Deploy the web application"
+    - step: 4
+      modules: ["kbrockhoff/monitoring/terraform"]
+      description: "Optional: Add enhanced monitoring"
+
+validation:
+  pre_deployment:
+    - name: "Check Cloud Provider Credentials"
+      type: "cloud_api"
+      description: "Verify cloud provider authentication is configured"
+      command: "terraform providers"
+      expected_result: "provider configured"
+      error_message: "Cloud provider credentials not configured"
+      remediation: "Run 'aws configure', 'az login', or 'gcloud auth login'"
+
+    - name: "Validate Terraform Configuration"
+      type: "terraform"
+      description: "Validate Terraform syntax and configuration"
+      command: "terraform validate"
+      expected_result: "Success"
+      error_message: "Terraform configuration is invalid"
+      remediation: "Fix syntax errors in Terraform files"
+
+    - name: "Check Resource Quotas"
+      type: "cloud_api"
+      description: "Verify sufficient resource quotas are available"
+      command: "check_quotas.sh"
+      expected_result: "quotas_sufficient"
+      error_message: "Insufficient resource quotas"
+      remediation: "Request quota increase or reduce resource requirements"
+
+  post_deployment:
+    - name: "Verify Application Health"
+      type: "custom"
+      description: "Check if the application is responding to health checks"
+      command: "curl -f ${load_balancer_url}/health"
+      expected_result: "HTTP 200"
+      error_message: "Application health check failed"
+      remediation: "Check application logs and configuration"
+
+    - name: "Validate SSL Certificate"
+      type: "custom"
+      description: "Verify SSL certificate is properly configured"
+      command: "openssl s_client -connect ${domain_name}:443"
+      expected_result: "certificate_valid"
+      error_message: "SSL certificate validation failed"
+      remediation: "Check certificate configuration and DNS settings"

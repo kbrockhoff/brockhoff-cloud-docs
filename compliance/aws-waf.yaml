@@ -1,0 +1,279 @@
+# AWS Well-Architected Framework Compliance Mapping
+# This file maps module implementations to AWS Well-Architected Framework pillars and best practices
+
+framework:
+  name: "AWS Well-Architected Framework"
+  version: "2023"
+  url: "https://docs.aws.amazon.com/wellarchitected/latest/framework/"
+
+pillars:
+  operational_excellence:
+    description: "Focus on running and monitoring systems to deliver business value and continually improving processes and procedures"
+    controls:
+      - id: "OPS01"
+        title: "Prepare - Design Workload Observability"
+        implementation: "CloudWatch monitoring and logging enabled by default"
+        evidence_fields:
+          - "module.monitoring.cloudwatch_dashboard_url"
+          - "aws_cloudwatch_log_group.main.arn"
+          - "local.monitoring_enabled"
+        validation_checks:
+          - "var.monitoring_config.enabled == true for Production environments"
+          - "CloudWatch alarms configured for critical metrics"
+        
+      - id: "OPS02"
+        title: "Prepare - Implement Application Telemetry"
+        implementation: "Application-level metrics and distributed tracing support"
+        evidence_fields:
+          - "aws_cloudwatch_metric_alarm.*.arn"
+          - "module.monitoring.custom_metrics"
+        validation_checks:
+          - "Custom application metrics defined"
+          - "Error rate and latency monitoring enabled"
+        
+      - id: "OPS03"
+        title: "Operate - Understand Workload Health"
+        implementation: "Comprehensive health checks and status monitoring"
+        evidence_fields:
+          - "aws_route53_health_check.*.id"
+          - "aws_application_load_balancer.main.health_check"
+        validation_checks:
+          - "Health check endpoints configured"
+          - "Automated recovery procedures defined"
+        
+      - id: "OPS04"
+        title: "Evolve - Implement Feedback Loops"
+        implementation: "Automated feedback collection and continuous improvement"
+        evidence_fields:
+          - "local.governance_metadata"
+          - "output.compliance_report"
+        validation_checks:
+          - "Governance metadata collection enabled"
+          - "Compliance reporting automated"
+
+  security:
+    description: "Protect information, systems, and assets while delivering business value through risk assessments and mitigation strategies"
+    controls:
+      - id: "SEC01"
+        title: "Identity and Access Management"
+        implementation: "Least privilege IAM policies and role-based access"
+        evidence_fields:
+          - "module.deployer.iam_policy_arn"
+          - "aws_iam_role.main.arn"
+          - "data.aws_iam_policy_document.main.json"
+        validation_checks:
+          - "IAM policies follow least privilege principle"
+          - "No wildcard permissions in production"
+          - "MFA required for sensitive operations"
+        
+      - id: "SEC02"
+        title: "Detective Controls"
+        implementation: "Comprehensive logging and monitoring for security events"
+        evidence_fields:
+          - "aws_cloudtrail.main.arn"
+          - "aws_config_configuration_recorder.main.name"
+          - "aws_guardduty_detector.main.id"
+        validation_checks:
+          - "CloudTrail logging enabled for all regions"
+          - "AWS Config rules configured"
+          - "GuardDuty threat detection active"
+        
+      - id: "SEC03"
+        title: "Infrastructure Protection"
+        implementation: "Network security and infrastructure hardening"
+        evidence_fields:
+          - "aws_security_group.main.id"
+          - "aws_network_acl.main.id"
+          - "aws_wafv2_web_acl.main.arn"
+        validation_checks:
+          - "Security groups follow least privilege"
+          - "Network ACLs configured appropriately"
+          - "WAF rules active for public endpoints"
+        
+      - id: "SEC04"
+        title: "Data Protection in Transit and at Rest"
+        implementation: "Encryption for all data at rest and in transit"
+        evidence_fields:
+          - "aws_kms_key.main.arn"
+          - "aws_s3_bucket_server_side_encryption_configuration.main"
+          - "aws_lb_listener.https.ssl_policy"
+        validation_checks:
+          - "KMS encryption enabled for all data stores"
+          - "TLS 1.2+ required for all connections"
+          - "Encryption in transit enforced"
+        
+      - id: "SEC05"
+        title: "Incident Response"
+        implementation: "Automated incident response and forensics capabilities"
+        evidence_fields:
+          - "aws_sns_topic.security_alerts.arn"
+          - "aws_lambda_function.incident_response.arn"
+        validation_checks:
+          - "Security incident alerting configured"
+          - "Automated response procedures defined"
+
+  reliability:
+    description: "Ability to recover from infrastructure or service disruptions and dynamically acquire computing resources to meet demand"
+    controls:
+      - id: "REL01"
+        title: "Manage Service Quotas and Constraints"
+        implementation: "Automated quota monitoring and management"
+        evidence_fields:
+          - "data.aws_service_quotas_service_quota.*.value"
+          - "local.quota_utilization_report"
+        validation_checks:
+          - "Service quotas monitored and alerted"
+          - "Quota increase automation available"
+        
+      - id: "REL02"
+        title: "Plan Network Topology"
+        implementation: "Multi-AZ deployment with proper network segmentation"
+        evidence_fields:
+          - "aws_subnet.main.*.availability_zone"
+          - "aws_route_table.main.*.id"
+          - "aws_nat_gateway.main.*.subnet_id"
+        validation_checks:
+          - "Resources deployed across multiple AZs"
+          - "Network redundancy implemented"
+        
+      - id: "REL03"
+        title: "Design Interactions to Prevent Failures"
+        implementation: "Circuit breakers, retries, and graceful degradation"
+        evidence_fields:
+          - "aws_application_load_balancer.main.enable_cross_zone_load_balancing"
+          - "aws_autoscaling_group.main.health_check_type"
+        validation_checks:
+          - "Load balancing across AZs enabled"
+          - "Health checks configured properly"
+        
+      - id: "REL04"
+        title: "Design Interactions to Mitigate or Withstand Failures"
+        implementation: "Automated backup and disaster recovery"
+        evidence_fields:
+          - "aws_backup_plan.main.arn"
+          - "aws_db_instance.main.backup_retention_period"
+        validation_checks:
+          - "Automated backups configured"
+          - "RTO/RPO requirements met"
+        
+      - id: "REL05"
+        title: "Deploy Using Automation"
+        implementation: "Infrastructure as Code with automated deployment"
+        evidence_fields:
+          - "local.module_metadata"
+          - "terraform.workspace"
+        validation_checks:
+          - "All infrastructure defined as code"
+          - "Automated deployment pipelines active"
+
+  performance_efficiency:
+    description: "Use computing resources efficiently to meet system requirements and maintain efficiency as demand changes"
+    controls:
+      - id: "PERF01"
+        title: "Selection - Compute"
+        implementation: "Right-sized compute resources with auto-scaling"
+        evidence_fields:
+          - "aws_autoscaling_group.main.desired_capacity"
+          - "aws_instance.main.*.instance_type"
+          - "local.instance_recommendations"
+        validation_checks:
+          - "Instance types appropriate for workload"
+          - "Auto-scaling policies configured"
+        
+      - id: "PERF02"
+        title: "Selection - Storage"
+        implementation: "Optimized storage types and configurations"
+        evidence_fields:
+          - "aws_ebs_volume.main.type"
+          - "aws_s3_bucket.main.storage_class"
+        validation_checks:
+          - "Storage types match access patterns"
+          - "Storage optimization enabled"
+        
+      - id: "PERF03"
+        title: "Selection - Database"
+        implementation: "Database engine and configuration optimization"
+        evidence_fields:
+          - "aws_db_instance.main.engine"
+          - "aws_db_instance.main.instance_class"
+        validation_checks:
+          - "Database engine appropriate for use case"
+          - "Performance monitoring enabled"
+        
+      - id: "PERF04"
+        title: "Selection - Network"
+        implementation: "Network optimization and content delivery"
+        evidence_fields:
+          - "aws_cloudfront_distribution.main.arn"
+          - "aws_vpc_endpoint.main.*.id"
+        validation_checks:
+          - "CDN configured for static content"
+          - "VPC endpoints used where appropriate"
+
+  cost_optimization:
+    description: "Avoid unnecessary costs and understand spending patterns"
+    controls:
+      - id: "COST01"
+        title: "Practice Cloud Financial Management"
+        implementation: "Cost monitoring, budgets, and optimization recommendations"
+        evidence_fields:
+          - "module.pricing.monthly_cost_estimate"
+          - "module.pricing.cost_breakdown"
+          - "aws_budgets_budget.main.arn"
+        validation_checks:
+          - "Cost estimation provided"
+          - "Budget alerts configured"
+        
+      - id: "COST02"
+        title: "Expenditure and Usage Awareness"
+        implementation: "Detailed cost tracking and allocation"
+        evidence_fields:
+          - "local.cost_allocation_tags"
+          - "aws_ce_cost_category.main.arn"
+        validation_checks:
+          - "Cost allocation tags applied"
+          - "Cost categories defined"
+        
+      - id: "COST03"
+        title: "Cost-Effective Resources"
+        implementation: "Right-sizing and reserved instance recommendations"
+        evidence_fields:
+          - "local.cost_optimization_recommendations"
+          - "data.aws_ec2_instance_type_offering.recommended"
+        validation_checks:
+          - "Right-sizing analysis performed"
+          - "Reserved instance opportunities identified"
+        
+      - id: "COST04"
+        title: "Manage Demand and Supply Resources"
+        implementation: "Dynamic scaling and resource scheduling"
+        evidence_fields:
+          - "aws_autoscaling_schedule.main.*.arn"
+          - "aws_lambda_function.cost_optimizer.arn"
+        validation_checks:
+          - "Scheduled scaling configured for dev/test"
+          - "Automated cost optimization active"
+
+# Compliance assessment configuration
+assessment:
+  scoring:
+    method: "weighted"
+    weights:
+      operational_excellence: 0.2
+      security: 0.3
+      reliability: 0.2
+      performance_efficiency: 0.15
+      cost_optimization: 0.15
+  
+  thresholds:
+    production:
+      minimum_score: 0.85
+      required_controls: ["SEC01", "SEC02", "SEC03", "SEC04", "REL02", "REL03", "REL04"]
+    development:
+      minimum_score: 0.70
+      required_controls: ["SEC01", "SEC04"]
+  
+  reporting:
+    format: "json"
+    include_evidence: true
+    include_recommendations: true

@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Integration Demo - User-Friendly Interface</title>
+    <link rel="stylesheet" href="../../templates/portal-form-styles.css">
+    <style>
+        /* Demo-specific styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        
+        .demo-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        
+        .demo-header h1 {
+            margin: 0 0 1rem 0;
+            color: #1e293b;
+        }
+        
+        .demo-header p {
+            color: #64748b;
+            font-size: 1.125rem;
+        }
+        
+        .terraform-preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            max-width: 800px;
+            max-height: 80vh;
+            width: 90%;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+        }
+        
+        .modal-header button {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            color: #64748b;
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        .modal-body pre {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+        
+        .modal-footer button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .modal-footer button:first-child {
+            background: #2563eb;
+            color: white;
+        }
+        
+        .modal-footer button:last-child {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            color: white;
+            font-weight: 500;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            min-width: 300px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+        
+        .notification-success { background: #059669; }
+        .notification-error { background: #dc2626; }
+        .notification-warning { background: #d97706; }
+        .notification-info { background: #0891b2; }
+        
+        .notification button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.125rem;
+            padding: 0;
+            margin-left: auto;
+        }
+        
+        .prereq-valid {
+            background: #f0fdf4 !important;
+            border-color: #bbf7d0 !important;
+        }
+        
+        .prereq-invalid {
+            background: #fef2f2 !important;
+            border-color: #fecaca !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-header">
+        <h1>🚀 Portal Integration Demo</h1>
+        <p>Experience the user-friendly interface for Terraform module deployment</p>
+    </div>
+
+    <div id="portal-form-container"></div>
+
+    <script src="../../templates/portal-form-generator.js"></script>
+    <script src="../../templates/portal-form-utils.js"></script>
+    
+    <script>
+        // Sample portal metadata for demonstration
+        window.portalMetadata = {
+            "schema_version": "1.0",
+            "module_info": {
+                "name": "web-application",
+                "version": "1.0.0",
+                "description": "Deploy a scalable web application with load balancer, auto-scaling, and monitoring",
+                "category": "compute",
+                "cloud_providers": ["aws", "azure", "gcp"],
+                "tags": ["web", "scalable", "production-ready", "monitoring"]
+            },
+            "portal_config": {
+                "deployment_time": "10-15 minutes",
+                "complexity_level": "intermediate",
+                "user_personas": ["developer", "devops_engineer"],
+                "use_cases": [
+                    "Production web application deployment",
+                    "Scalable API backend",
+                    "Microservices hosting"
+                ]
+            },
+            "form_schema": {
+                "sections": [
+                    {
+                        "title": "Basic Configuration",
+                        "description": "Essential settings for your web application",
+                        "fields": [
+                            {
+                                "name": "application_name",
+                                "type": "string",
+                                "label": "Application Name",
+                                "description": "Name for your web application (used in resource naming)",
+                                "required": true,
+                                "placeholder": "my-web-app",
+                                "validation": {
+                                    "pattern": "^[a-z0-9-]+$",
+                                    "minLength": 3,
+                                    "maxLength": 32
+                                },
+                                "help_text": "Use lowercase letters, numbers, and hyphens only. This will be used to name all your cloud resources."
+                            },
+                            {
+                                "name": "environment",
+                                "type": "select",
+                                "label": "Environment",
+                                "description": "Deployment environment (affects resource sizing and monitoring)",
+                                "required": true,
+                                "default": "Development",
+                                "options": [
+                                    {
+                                        "value": "Development",
+                                        "label": "Development",
+                                        "description": "Lower cost, basic monitoring"
+                                    },
+                                    {
+                                        "value": "Testing",
+                                        "label": "Testing/Staging",
+                                        "description": "Medium resources, enhanced monitoring"
+                                    },
+                                    {
+                                        "value": "Production",
+                                        "label": "Production",
+                                        "description": "High availability, full monitoring"
+                                    },
+                                    {
+                                        "value": "MissionCritical",
+                                        "label": "Mission Critical",
+                                        "description": "Maximum availability, comprehensive monitoring"
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "cloud_provider",
+                                "type": "select",
+                                "label": "Cloud Provider",
+                                "description": "Choose your preferred cloud provider",
+                                "required": true,
+                                "options": [
+                                    {
+                                        "value": "aws",
+                                        "label": "Amazon Web Services (AWS)",
+                                        "description": "Mature ecosystem, extensive services"
+                                    },
+                                    {
+                                        "value": "azure",
+                                        "label": "Microsoft Azure",
+                                        "description": "Strong enterprise integration"
+                                    },
+                                    {
+                                        "value": "gcp",
+                                        "label": "Google Cloud Platform",
+                                        "description": "Advanced analytics and ML capabilities"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "title": "Application Configuration",
+                        "description": "Configure your application settings",
+                        "fields": [
+                            {
+                                "name": "instance_type",
+                                "type": "select",
+                                "label": "Instance Size",
+                                "description": "Choose instance size based on expected load",
+                                "required": true,
+                                "default": "small",
+                                "options": [
+                                    {
+                                        "value": "small",
+                                        "label": "Small (1-2 vCPU, 2-4 GB RAM)",
+                                        "description": "Good for development and light workloads - ~$30/month"
+                                    },
+                                    {
+                                        "value": "medium",
+                                        "label": "Medium (2-4 vCPU, 4-8 GB RAM)",
+                                        "description": "Suitable for moderate traffic applications - ~$60/month"
+                                    },
+                                    {
+                                        "value": "large",
+                                        "label": "Large (4-8 vCPU, 8-16 GB RAM)",
+                                        "description": "High traffic and resource-intensive applications - ~$120/month"
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "min_instances",
+                                "type": "number",
+                                "label": "Minimum Instances",
+                                "description": "Minimum number of instances to run (for high availability)",
+                                "required": true,
+                                "default": 1,
+                                "validation": {
+                                    "min": 1,
+                                    "max": 10
+                                },
+                                "help_text": "Setting this to 2 or more provides high availability but increases costs proportionally."
+                            },
+                            {
+                                "name": "max_instances",
+                                "type": "number",
+                                "label": "Maximum Instances",
+                                "description": "Maximum number of instances for auto-scaling",
+                                "required": true,
+                                "default": 3,
+                                "validation": {
+                                    "min": 1,
+                                    "max": 50
+                                }
+                            },
+                            {
+                                "name": "enable_https",
+                                "type": "boolean",
+                                "label": "Enable HTTPS",
+                                "description": "Enable SSL/TLS encryption (strongly recommended for production)",
+                                "default": true
+                            },
+                            {
+                                "name": "domain_name",
+                                "type": "string",
+                                "label": "Custom Domain",
+                                "description": "Optional custom domain name (requires DNS configuration)",
+                                "required": false,
+                                "placeholder": "app.example.com",
+                                "conditional": {
+                                    "field": "enable_https",
+                                    "operator": "equals",
+                                    "value": true
+                                },
+                                "validation": {
+                                    "pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$"
+                                },
+                                "help_text": "You'll need to configure DNS to point this domain to the load balancer after deployment."
+                            }
+                        ]
+                    },
+                    {
+                        "title": "Advanced Settings",
+                        "description": "Optional advanced configuration for experienced users",
+                        "collapsible": true,
+                        "fields": [
+                            {
+                                "name": "enable_monitoring",
+                                "type": "boolean",
+                                "label": "Enable Enhanced Monitoring",
+                                "description": "Enable detailed application and infrastructure monitoring (+$10/month)",
+                                "default": false
+                            },
+                            {
+                                "name": "backup_retention_days",
+                                "type": "number",
+                                "label": "Backup Retention (Days)",
+                                "description": "Number of days to retain automated backups",
+                                "default": 7,
+                                "validation": {
+                                    "min": 1,
+                                    "max": 365
+                                }
+                            },
+                            {
+                                "name": "custom_tags",
+                                "type": "map",
+                                "label": "Custom Tags",
+                                "description": "Additional tags for resource organization and cost tracking",
+                                "required": false,
+                                "help_text": "Use tags like 'Project', 'Owner', 'CostCenter' to organize and track your resources."
+                            },
+                            {
+                                "name": "allowed_cidr_blocks",
+                                "type": "list",
+                                "label": "Allowed IP Ranges",
+                                "description": "IP ranges allowed to access the application (CIDR notation)",
+                                "required": false,
+                                "default": ["0.0.0.0/0"],
+                                "help_text": "For security, consider restricting access to specific IP ranges. Use 0.0.0.0/0 for public access."
+                            }
+                        ]
+                    }
+                ]
+            },
+            "cost_estimation": {
+                "base_cost_category": "medium",
+                "estimated_monthly_cost": {
+                    "min": 50,
+                    "max": 500,
+                    "typical": 150
+                },
+                "cost_factors": [
+                    {
+                        "factor": "Instance Size",
+                        "impact": "high",
+                        "description": "Larger instances significantly increase compute costs"
+                    },
+                    {
+                        "factor": "Number of Instances",
+                        "impact": "high",
+                        "description": "Auto-scaling increases costs during high traffic periods"
+                    },
+                    {
+                        "factor": "Data Transfer",
+                        "impact": "medium",
+                        "description": "Outbound data transfer charges apply based on usage"
+                    },
+                    {
+                        "factor": "Load Balancer",
+                        "impact": "low",
+                        "description": "Fixed monthly cost for load balancer (~$20/month)"
+                    },
+                    {
+                        "factor": "Enhanced Monitoring",
+                        "impact": "low",
+                        "description": "Additional monitoring services (~$10/month)"
+                    }
+                ],
+                "cost_optimization_tips": [
+                    "Use smaller instances for development environments",
+                    "Configure auto-scaling to minimize idle instances",
+                    "Enable CloudFront/CDN to reduce data transfer costs",
+                    "Use reserved instances for predictable production workloads",
+                    "Set up billing alerts to monitor spending"
+                ]
+            },
+            "difficulty_assessment": {
+                "overall_difficulty": 3,
+                "skill_requirements": {
+                    "terraform_experience": "basic",
+                    "cloud_experience": "intermediate",
+                    "networking_knowledge": "basic",
+                    "security_knowledge": "basic"
+                },
+                "complexity_factors": [
+                    {
+                        "factor": "Multi-cloud Support",
+                        "level": "medium",
+                        "description": "Understanding differences between cloud providers"
+                    },
+                    {
+                        "factor": "Auto-scaling Configuration",
+                        "level": "medium",
+                        "description": "Configuring appropriate scaling policies and thresholds"
+                    },
+                    {
+                        "factor": "Load Balancer Setup",
+                        "level": "low",
+                        "description": "Standard load balancer configuration with health checks"
+                    },
+                    {
+                        "factor": "SSL Certificate Management",
+                        "level": "medium",
+                        "description": "Managing SSL certificates and domain validation"
+                    }
+                ]
+            },
+            "prerequisites": {
+                "required_modules": [
+                    {
+                        "module_name": "kbrockhoff/external-context/terraform",
+                        "version_constraint": ">= 1.0.0",
+                        "description": "Provides consistent naming and tagging across cloud providers"
+                    },
+                    {
+                        "module_name": "kbrockhoff/networking/terraform",
+                        "version_constraint": ">= 1.0.0",
+                        "description": "Creates VPC/VNet and networking infrastructure"
+                    }
+                ],
+                "cloud_resources": [
+                    {
+                        "resource_type": "VPC/Virtual Network",
+                        "provider": "aws",
+                        "description": "Virtual Private Cloud for network isolation",
+                        "setup_instructions": "Deploy the networking module first or use existing VPC"
+                    },
+                    {
+                        "resource_type": "Resource Group",
+                        "provider": "azure",
+                        "description": "Resource group for organizing Azure resources",
+                        "setup_instructions": "Create resource group or use existing one"
+                    },
+                    {
+                        "resource_type": "Project",
+                        "provider": "gcp",
+                        "description": "GCP project for resource organization",
+                        "setup_instructions": "Ensure GCP project exists and billing is enabled"
+                    }
+                ],
+                "permissions": [
+                    {
+                        "permission": "EC2FullAccess, ELBFullAccess, AutoScalingFullAccess",
+                        "provider": "aws",
+                        "description": "Required for creating compute and load balancing resources"
+                    },
+                    {
+                        "permission": "Contributor",
+                        "provider": "azure",
+                        "description": "Required for creating and managing Azure resources"
+                    },
+                    {
+                        "permission": "Compute Admin, Network Admin",
+                        "provider": "gcp",
+                        "description": "Required for creating compute and networking resources"
+                    }
+                ],
+                "tools": [
+                    {
+                        "tool_name": "terraform",
+                        "version_constraint": ">= 1.0",
+                        "installation_url": "https://terraform.io/downloads"
+                    },
+                    {
+                        "tool_name": "aws-cli",
+                        "version_constraint": ">= 2.0",
+                        "installation_url": "https://aws.amazon.com/cli/"
+                    }
+                ]
+            }
+        };
+
+        // Initialize the form when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const generator = new PortalFormGenerator(window.portalMetadata, {
+                theme: 'default',
+                showAdvanced: false,
+                enableTooltips: true,
+                autoSave: true
+            });
+
+            const container = document.getElementById('portal-form-container');
+            container.innerHTML = generator.generateForm();
+
+            // Initialize form utilities
+            const form = document.getElementById('module-form');
+            if (form) {
+                form.portalUtils = new PortalFormUtils(form, window.portalMetadata);
+                
+                // Handle form submission
+                form.addEventListener('portalFormSubmit', function(event) {
+                    const { formData, metadata } = event.detail;
+                    
+                    console.log('Form submitted with data:', formData);
+                    console.log('Module metadata:', metadata);
+                    
+                    // Simulate deployment process
+                    simulateDeployment(formData);
+                });
+            }
+        });
+
+        // Simulate deployment process for demo
+        function simulateDeployment(formData) {
+            const steps = [
+                'Validating configuration...',
+                'Checking prerequisites...',
+                'Initializing Terraform...',
+                'Planning infrastructure changes...',
+                'Creating cloud resources...',
+                'Configuring load balancer...',
+                'Setting up auto-scaling...',
+                'Configuring monitoring...',
+                'Deployment complete! 🎉'
+            ];
+
+            let currentStep = 0;
+            const interval = setInterval(() => {
+                if (currentStep < steps.length - 1) {
+                    showNotification(steps[currentStep], 'info');
+                    currentStep++;
+                } else {
+                    showNotification(steps[currentStep], 'success');
+                    clearInterval(interval);
+                    
+                    // Show deployment results
+                    setTimeout(() => {
+                        showDeploymentResults(formData);
+                    }, 2000);
+                }
+            }, 1500);
+        }
+
+        // Show deployment results
+        function showDeploymentResults(formData) {
+            const modal = document.createElement('div');
+            modal.className = 'terraform-preview-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>🎉 Deployment Successful!</h3>
+                        <button onclick="this.closest('.terraform-preview-modal').remove()">✕</button>
+                    </div>
+                    <div class="modal-body">
+                        <h4>Your ${formData.application_name} application has been deployed successfully!</h4>
+                        <p><strong>Environment:</strong> ${formData.environment}</p>
+                        <p><strong>Cloud Provider:</strong> ${formData.cloud_provider?.toUpperCase()}</p>
+                        <p><strong>Instance Type:</strong> ${formData.instance_type}</p>
+                        <p><strong>Scaling:</strong> ${formData.min_instances} - ${formData.max_instances} instances</p>
+                        
+                        <h4>Next Steps:</h4>
+                        <ul>
+                            <li>✅ Load balancer is ready and healthy</li>
+                            <li>✅ Auto-scaling is configured</li>
+                            <li>✅ Monitoring is ${formData.enable_monitoring ? 'enabled' : 'disabled'}</li>
+                            <li>✅ HTTPS is ${formData.enable_https ? 'enabled' : 'disabled'}</li>
+                        </ul>
+                        
+                        <p><strong>Application URL:</strong> 
+                           <a href="#" target="_blank">
+                               ${formData.domain_name || `${formData.application_name}-lb.${formData.cloud_provider}.example.com`}
+                           </a>
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button onclick="window.open('#', '_blank')">🌐 Open Application</button>
+                        <button onclick="this.closest('.terraform-preview-modal').remove()">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        // Enhanced notification function for demo
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()">✕</button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 3 seconds for demo
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

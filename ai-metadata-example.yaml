@@ -1,0 +1,320 @@
+# Example AI Metadata for a Compute Module
+# This demonstrates how the schema is applied to a real Terraform module
+
+schema_version: "1.0"
+
+module_info:
+  name: "compute-instance"
+  type: "service"
+  complexity_level: "intermediate"
+  cloud_providers: ["aws", "azure", "gcp"]
+  category: "compute"
+  description: "Multi-cloud compute instance with auto-scaling and monitoring"
+  estimated_deployment_time: "5-10 minutes"
+
+generation_templates:
+  basic_usage: |
+    module "{{ module_name }}" {
+      source = "{{ module_source }}"
+      
+      name_prefix     = "{{ name_prefix }}"
+      environment_type = "{{ environment_type | default('Development') }}"
+      
+      instance_config = {
+        instance_type = "{{ instance_type | default('small') }}"
+        min_size      = {{ min_size | default(1) }}
+        max_size      = {{ max_size | default(3) }}
+        desired_size  = {{ desired_size | default(1) }}
+      }
+      
+      {% if enable_monitoring %}
+      monitoring_config = {
+        enabled = true
+      }
+      {% endif %}
+      
+      {% if custom_tags %}
+      tags = {
+        {% for key, value in custom_tags.items() %}
+        {{ key }} = "{{ value }}"
+        {% endfor %}
+      }
+      {% endif %}
+    }
+
+  advanced_usage: |
+    module "{{ module_name }}" {
+      source = "{{ module_source }}"
+      
+      name_prefix     = "{{ name_prefix }}"
+      environment_type = "{{ environment_type | default('Production') }}"
+      
+      instance_config = {
+        instance_type = "{{ instance_type | default('medium') }}"
+        min_size      = {{ min_size | default(2) }}
+        max_size      = {{ max_size | default(10) }}
+        desired_size  = {{ desired_size | default(3) }}
+      }
+      
+      encryption_config = {
+        create_kms_key = {{ create_kms_key | default(true) }}
+        kms_key_deletion_window_days = {{ kms_deletion_days | default(30) }}
+      }
+      
+      monitoring_config = {
+        enabled = true
+      }
+      
+      alarms_config = {
+        enabled = true
+        create_sns_topic = {{ create_sns_topic | default(true) }}
+      }
+      
+      {% if vpc_id %}
+      network_config = {
+        vpc_id = "{{ vpc_id }}"
+        subnet_ids = {{ subnet_ids | terraform_format }}
+      }
+      {% endif %}
+    }
+
+  multi_cloud: |
+    # AWS Implementation
+    module "{{ module_name }}_aws" {
+      source = "{{ module_source }}/aws"
+      
+      name_prefix = "{{ name_prefix }}-aws"
+      environment_type = "{{ environment_type }}"
+      
+      instance_config = {
+        instance_type = "{{ aws_instance_type | default('t3.medium') }}"
+        min_size      = {{ min_size | default(1) }}
+        max_size      = {{ max_size | default(5) }}
+      }
+    }
+    
+    # Azure Implementation  
+    module "{{ module_name }}_azure" {
+      source = "{{ module_source }}/azure"
+      
+      name_prefix = "{{ name_prefix }}-az"
+      environment_type = "{{ environment_type }}"
+      
+      instance_config = {
+        vm_size  = "{{ azure_vm_size | default('Standard_B2s') }}"
+        min_size = {{ min_size | default(1) }}
+        max_size = {{ max_size | default(5) }}
+      }
+    }
+
+validation_rules:
+  - field: "name_prefix"
+    rule_type: "pattern"
+    pattern: "^[a-z][a-z0-9-]{0,22}[a-z0-9]$"
+    error_message: "name_prefix must be 2-24 characters, start with lowercase letter, contain only lowercase letters, numbers, and hyphens"
+    severity: "error"
+    remediation: "Use a shorter name with only lowercase letters, numbers, and hyphens"
+
+  - field: "environment_type"
+    rule_type: "allowed_values"
+    allowed_values: ["None", "Ephemeral", "Development", "Testing", "UAT", "Production", "MissionCritical"]
+    error_message: "environment_type must be a valid environment type"
+    severity: "error"
+    remediation: "Choose from: Development, Testing, UAT, Production, or MissionCritical"
+
+  - field: "instance_config.min_size"
+    rule_type: "range"
+    min_value: 0
+    max_value: 100
+    error_message: "min_size must be between 0 and 100"
+    severity: "error"
+    remediation: "Set min_size to a value between 0 and 100"
+
+  - field: "instance_config.max_size"
+    rule_type: "dependency"
+    depends_on: ["instance_config.min_size"]
+    custom_validation: "max_size must be greater than or equal to min_size"
+    error_message: "max_size must be greater than or equal to min_size"
+    severity: "error"
+    remediation: "Ensure max_size >= min_size"
+
+  - field: "instance_config.instance_type"
+    rule_type: "allowed_values"
+    allowed_values: ["small", "medium", "large", "xlarge"]
+    error_message: "instance_type must be a valid size"
+    severity: "warning"
+    remediation: "Use small for development, medium for testing, large for production"
+
+common_patterns:
+  - pattern_name: "web_application"
+    description: "Standard web application with load balancing and auto-scaling"
+    use_case: "Public-facing web applications requiring high availability"
+    template_variables:
+      instance_type: "medium"
+      min_size: 2
+      max_size: 10
+      desired_size: 3
+      enable_monitoring: true
+      create_kms_key: true
+    estimated_cost: "medium"
+
+  - pattern_name: "development_environment"
+    description: "Cost-optimized setup for development and testing"
+    use_case: "Development environments that can be shut down outside business hours"
+    template_variables:
+      instance_type: "small"
+      min_size: 1
+      max_size: 2
+      desired_size: 1
+      enable_monitoring: false
+      create_kms_key: false
+    estimated_cost: "low"
+
+  - pattern_name: "high_availability_production"
+    description: "Production-grade deployment with full monitoring and encryption"
+    use_case: "Mission-critical applications requiring maximum uptime"
+    template_variables:
+      instance_type: "large"
+      min_size: 3
+      max_size: 20
+      desired_size: 5
+      enable_monitoring: true
+      create_kms_key: true
+      environment_type: "Production"
+    estimated_cost: "high"
+
+integration_points:
+  - module: "networking"
+    connection_type: "dependency"
+    required_outputs: ["vpc_id", "subnet_ids"]
+    optional_outputs: ["security_group_id"]
+    integration_example: |
+      module "network" {
+        source = "kbrockhoff/networking/terraform"
+        # ... network configuration
+      }
+      
+      module "compute" {
+        source = "kbrockhoff/compute-instance/terraform"
+        
+        network_config = {
+          vpc_id     = module.network.vpc_id
+          subnet_ids = module.network.private_subnet_ids
+        }
+      }
+
+  - module: "security"
+    connection_type: "reference"
+    required_outputs: ["security_group_id"]
+    integration_example: |
+      security_group_ids = [module.security.web_security_group_id]
+
+  - module: "monitoring"
+    connection_type: "optional"
+    optional_outputs: ["dashboard_url", "alarm_topic_arn"]
+    integration_example: |
+      alarms_config = {
+        enabled = true
+        sns_topic_arn = module.monitoring.alarm_topic_arn
+      }
+
+cost_estimation:
+  base_cost_per_hour: 0.05
+  base_cost_per_month: 36.50
+  scaling_factors:
+    instance_type:
+      small: 1.0
+      medium: 2.0
+      large: 4.0
+      xlarge: 8.0
+    environment_type:
+      Development: 0.5
+      Testing: 0.7
+      Production: 1.0
+      MissionCritical: 1.5
+  cost_variables:
+    - variable: "instance_config.desired_size"
+      impact: "linear"
+      multiplier: 1.0
+    - variable: "monitoring_config.enabled"
+      impact: "step"
+      multiplier: 1.2
+    - variable: "encryption_config.create_kms_key"
+      impact: "step"
+      multiplier: 1.1
+  cost_optimization_hints:
+    - "Use 'small' instance type for development environments"
+    - "Enable auto-scaling to optimize costs during low usage periods"
+    - "Consider spot instances for non-critical workloads"
+    - "Use scheduled scaling for predictable traffic patterns"
+
+testing_scenarios:
+  - name: "basic_deployment"
+    description: "Validates basic module deployment with minimal configuration"
+    variables:
+      name_prefix: "test-app"
+      environment_type: "Development"
+      instance_config:
+        instance_type: "small"
+        min_size: 1
+        max_size: 2
+    expected_outcome:
+      resource_count: 5
+      success: true
+      validation_checks:
+        - "Auto-scaling group created"
+        - "Launch template configured"
+        - "Security group attached"
+
+  - name: "production_deployment"
+    description: "Validates production-ready deployment with full features"
+    variables:
+      name_prefix: "prod-app"
+      environment_type: "Production"
+      instance_config:
+        instance_type: "large"
+        min_size: 3
+        max_size: 10
+      monitoring_config:
+        enabled: true
+      encryption_config:
+        create_kms_key: true
+    expected_outcome:
+      resource_count: 12
+      success: true
+      validation_checks:
+        - "KMS key created"
+        - "CloudWatch alarms configured"
+        - "SNS topic for notifications"
+        - "Multi-AZ deployment"
+
+  - name: "invalid_configuration"
+    description: "Tests validation of invalid input parameters"
+    variables:
+      name_prefix: "Invalid-Name-123!"
+      environment_type: "InvalidEnv"
+      instance_config:
+        min_size: 5
+        max_size: 2
+    expected_outcome:
+      success: false
+      validation_checks:
+        - "name_prefix validation fails"
+        - "environment_type validation fails"
+        - "min_size > max_size validation fails"
+
+  - name: "cost_optimization"
+    description: "Validates cost optimization recommendations"
+    variables:
+      name_prefix: "cost-test"
+      environment_type: "Development"
+      instance_config:
+        instance_type: "xlarge"
+        min_size: 10
+        max_size: 20
+    expected_outcome:
+      success: true
+      validation_checks:
+        - "Cost warning generated"
+        - "Alternative configuration suggested"
+        - "Estimated monthly cost calculated"

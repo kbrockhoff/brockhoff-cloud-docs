@@ -1,0 +1,47 @@
+# Basic Azure Compute Example Configuration
+# Copy this file to terraform.tfvars and customize for your environment
+
+# Core configuration
+name         = "my-basic-compute"
+environment  = "dev"
+environment_type = "Development"
+
+# Azure configuration
+azure_location = "West US 2"
+
+# Resource group (optional - creates new if not specified)
+# resource_group_name = "my-existing-rg"
+
+# Compute configuration
+instance_type = "small"  # small (Standard_B1s), medium (Standard_B2s), large (Standard_B4ms)
+
+# Network configuration (optional - creates new if not specified)
+# vnet_name   = "my-existing-vnet"
+# subnet_name = "my-existing-subnet"
+
+# Security configuration
+allowed_cidr_blocks = [
+  "10.0.0.0/8",      # Private networks
+  "172.16.0.0/12",   # Private networks  
+  "192.168.0.0/16"   # Private networks
+  # "203.0.113.0/24" # Add your public IP range if needed
+]
+
+# VM access configuration
+admin_username = "azureuser"
+
+# SSH access (optional - generates password if not provided)
+# ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAA... your-public-key"
+
+# Feature configuration
+create_key_vault   = true   # Create Key Vault for encryption
+monitoring_enabled = false  # Enable Azure Monitor (additional cost)
+alarms_enabled    = false  # Enable Azure Monitor alerts (additional cost)
+
+# Additional tags (optional)
+additional_tags = {
+  Project     = "BasicExample"
+  Owner       = "DevTeam"
+  CostCenter  = "Engineering"
+  Purpose     = "Learning"
+}

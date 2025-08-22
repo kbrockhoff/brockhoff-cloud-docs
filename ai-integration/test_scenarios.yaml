@@ -1,0 +1,491 @@
+# Comprehensive Test Scenarios for AI Testing Framework
+# This file demonstrates various test scenarios that AI agents should handle
+
+schema_version: "1.0"
+
+test_suites:
+  basic_validation:
+    description: "Basic validation tests for AI-generated configurations"
+    scenarios:
+      - name: "valid_basic_configuration"
+        description: "Test a valid basic configuration"
+        module_source: "kbrockhoff/compute-instance/terraform"
+        variables:
+          name_prefix: "test-app"
+          environment_type: "Development"
+          instance_config:
+            instance_type: "small"
+            min_size: 1
+            max_size: 3
+        expected_outcome:
+          success: true
+          resource_count: 5
+          validation_checks:
+            - "Auto-scaling group created"
+            - "Launch template configured"
+        cloud_provider: "aws"
+        timeout_seconds: 180
+
+      - name: "missing_required_field"
+        description: "Test handling of missing required fields"
+        module_source: "kbrockhoff/compute-instance/terraform"
+        variables:
+          environment_type: "Development"
+          # Missing name_prefix (required field)
+          instance_config:
+            instance_type: "small"
+        expected_outcome:
+          success: false
+          validation_checks:
+            - "name_prefix validation fails"
+        cloud_provider: "aws"
+
+      - name: "invalid_field_values"
+        description: "Test validation of invalid field values"
+        module_source: "kbrockhoff/compute-instance/terraform"
+        variables:
+          name_prefix: "Invalid-Name-With-Caps!"
+          environment_type: "InvalidEnvironment"
+          instance_config:
+            instance_type: "invalid_size"
+            min_size: -1
+            max_size: 0
+        expected_outcome:
+          success: false
+          validation_checks:
+            - "name_prefix validation fails"
+            - "environment_type validation fails"
+            - "instance_type validation fails"
+        cloud_provider: "aws"
+
+  production_scenarios:
+    description: "Production-grade configuration tests"
+    scenarios:
+      - name: "production_web_application"
+        description: "Production web application with full features"
+        module_source: "kbrockhoff/web-application/terraform"
+        variables:
+          name_prefix: "prod-webapp"
+          environment_type: "Production"
+          application_config:
+            instance_type: "large"
+            min_size: 3
+            max_size: 20
+            desired_size: 5
+          database_config:
+            engine: "postgres"
+            instance_class: "db.r5.xlarge"
+            multi_az: true
+          monitoring_config:
+            enabled: true
+            create_dashboard: true
+          encryption_config:
+            create_kms_key: true
+            kms_key_deletion_window_days: 30
+          backup_config:
+            enabled: true
+            retention_days: 30
+        expected_outcome:
+          success: true
+          resource_count: 25
+          validation_checks:
+            - "Load balancer configured"
+            - "Auto-scaling group created"
+            - "RDS instance with Multi-AZ"
+            - "KMS key created"
+            - "CloudWatch dashboard created"
+            - "Backup schedule configured"
+        cloud_provider: "aws"
+        timeout_seconds: 600
+
+      - name: "mission_critical_application"
+        description: "Mission-critical application with maximum availability"
+        module_source: "kbrockhoff/web-application/terraform"
+        variables:
+          name_prefix: "critical-app"
+          environment_type: "MissionCritical"
+          application_config:
+            instance_type: "xlarge"
+            min_size: 5
+            max_size: 50
+            desired_size: 10
+          database_config:
+            engine: "postgres"
+            instance_class: "db.r5.4xlarge"
+            multi_az: true
+            backup_retention_period: 35
+          monitoring_config:
+            enabled: true
+            create_dashboard: true
+            enable_detailed_monitoring: true
+          encryption_config:
+            create_kms_key: true
+            kms_key_deletion_window_days: 30
+          security_config:
+            enable_waf: true
+            enable_shield: true
+          disaster_recovery_config:
+            enabled: true
+            cross_region_backup: true
+        expected_outcome:
+          success: true
+          resource_count: 40
+          validation_checks:
+            - "Multi-region deployment"
+            - "WAF protection enabled"
+            - "Cross-region backups configured"
+            - "Detailed monitoring enabled"
+        cloud_provider: "aws"
+        timeout_seconds: 900
+
+  cost_optimization:
+    description: "Cost optimization test scenarios"
+    scenarios:
+      - name: "development_cost_optimized"
+        description: "Cost-optimized development environment"
+        module_source: "kbrockhoff/web-application/terraform"
+        variables:
+          name_prefix: "dev-app"
+          environment_type: "Development"
+          application_config:
+            instance_type: "small"
+            min_size: 1
+            max_size: 2
+            desired_size: 1
+          database_config:
+            engine: "postgres"
+            instance_class: "db.t3.micro"
+            multi_az: false
+          monitoring_config:
+            enabled: false
+          encryption_config:
+            create_kms_key: false
+          backup_config:
+            enabled: false
+        expected_outcome:
+          success: true
+          resource_count: 8
+          validation_checks:
+            - "Single AZ deployment"
+            - "Minimal instance sizes"
+            - "No unnecessary features enabled"
+        cloud_provider: "aws"
+        budget_constraint: 100.0  # $100/month limit
+
+      - name: "spot_instance_configuration"
+        description: "Configuration using spot instances for cost savings"
+        module_source: "kbrockhoff/compute-instance/terraform"
+        variables:
+          name_prefix: "spot-app"
+          environment_type: "Development"
+          instance_config:
+            instance_type: "medium"
+            min_size: 2
+            max_size: 10
+            use_spot_instances: true
+            spot_max_price: "0.05"
+          monitoring_config:
+            enabled: true
+        expected_outcome:
+          success: true
+          resource_count: 6
+          validation_checks:
+            - "Spot instance configuration"
+            - "Price limit configured"
+        cloud_provider: "aws"
+
+  multi_cloud:
+    description: "Multi-cloud deployment scenarios"
+    scenarios:
+      - name: "aws_deployment"
+        description: "Standard AWS deployment"
+        module_source: "kbrockhoff/compute-instance/terraform"
+        variables:
+          name_prefix: "aws-app"
+          environment_type: "Production"
+          instance_config:
+            instance_type: "medium"
+            min_size: 2
+            max_size: 10
+        expected_outcome:
+          success: true
+          resource_count: 7
+        cloud_provider: "aws"
+
+      - name: "azure_deployment"
+        description: "Equivalent Azure deployment"
+        module_source: "kbrockhoff/compute-instance/terraform"
+        variables:
+          name_prefix: "azure-app"
+          environment_type: "Production"
+          instance_config:
+            vm_size: "Standard_B2s"  # Azure equivalent
+            min_size: 2
+            max_size: 10
+        expected_outcome:
+          success: true
+          resource_count: 7
+        cloud_provider: "azure"
+
+      - name: "gcp_deployment"
+        description: "Equivalent GCP deployment"
+        module_source: "kbrockhoff/compute-instance/terraform"
+        variables:
+          name_prefix: "gcp-app"
+          environment_type: "Production"
+          instance_config:
+            machine_type: "e2-medium"  # GCP equivalent
+            min_size: 2
+            max_size: 10
+        expected_outcome:
+          success: true
+          resource_count: 7
+        cloud_provider: "gcp"
+
+  integration_tests:
+    description: "Module integration and composition tests"
+    scenarios:
+      - name: "network_compute_integration"
+        description: "Test integration between network and compute modules"
+        module_source: "kbrockhoff/compute-instance/terraform"
+        variables:
+          name_prefix: "integrated-app"
+          environment_type: "Production"
+          network_config:
+            vpc_id: "vpc-12345678"
+            subnet_ids: ["subnet-12345678", "subnet-87654321"]
+            security_group_ids: ["sg-12345678"]
+          instance_config:
+            instance_type: "medium"
+            min_size: 2
+            max_size: 5
+        expected_outcome:
+          success: true
+          resource_count: 5
+          validation_checks:
+            - "VPC integration configured"
+            - "Subnet placement correct"
+            - "Security group attached"
+        cloud_provider: "aws"
+        dependencies:
+          - module: "kbrockhoff/networking/terraform"
+            required_outputs: ["vpc_id", "subnet_ids"]
+
+      - name: "full_stack_composition"
+        description: "Test full application stack composition"
+        module_source: "kbrockhoff/web-application/terraform"
+        variables:
+          name_prefix: "fullstack-app"
+          environment_type: "Production"
+          application_config:
+            instance_type: "medium"
+            min_size: 2
+            max_size: 10
+          database_config:
+            engine: "postgres"
+            instance_class: "db.t3.medium"
+          load_balancer_config:
+            type: "application"
+            scheme: "internet-facing"
+          monitoring_config:
+            enabled: true
+        expected_outcome:
+          success: true
+          resource_count: 20
+          validation_checks:
+            - "All components integrated"
+            - "Load balancer targets configured"
+            - "Database connectivity established"
+        cloud_provider: "aws"
+
+  security_tests:
+    description: "Security-focused test scenarios"
+    scenarios:
+      - name: "encryption_at_rest"
+        description: "Test encryption at rest configuration"
+        module_source: "kbrockhoff/storage/terraform"
+        variables:
+          name_prefix: "secure-storage"
+          environment_type: "Production"
+          storage_config:
+            storage_type: "s3"
+            versioning_enabled: true
+          encryption_config:
+            create_kms_key: true
+            encryption_algorithm: "AES256"
+            kms_key_deletion_window_days: 30
+        expected_outcome:
+          success: true
+          resource_count: 4
+          validation_checks:
+            - "KMS key created"
+            - "Bucket encryption enabled"
+            - "Versioning configured"
+        cloud_provider: "aws"
+
+      - name: "network_security"
+        description: "Test network security configuration"
+        module_source: "kbrockhoff/networking/terraform"
+        variables:
+          name_prefix: "secure-network"
+          environment_type: "Production"
+          vpc_config:
+            cidr_block: "10.0.0.0/16"
+            enable_dns_hostnames: true
+          security_config:
+            enable_flow_logs: true
+            enable_nacls: true
+            restrict_default_sg: true
+        expected_outcome:
+          success: true
+          resource_count: 12
+          validation_checks:
+            - "VPC Flow Logs enabled"
+            - "Network ACLs configured"
+            - "Default security group restricted"
+        cloud_provider: "aws"
+
+  performance_tests:
+    description: "Performance and scalability test scenarios"
+    scenarios:
+      - name: "high_performance_compute"
+        description: "High-performance computing configuration"
+        module_source: "kbrockhoff/compute-instance/terraform"
+        variables:
+          name_prefix: "hpc-cluster"
+          environment_type: "Production"
+          instance_config:
+            instance_type: "xlarge"
+            min_size: 10
+            max_size: 100
+            desired_size: 20
+          performance_config:
+            enhanced_networking: true
+            placement_group: "cluster"
+            ebs_optimized: true
+          storage_config:
+            volume_type: "gp3"
+            volume_size: 1000
+            iops: 3000
+        expected_outcome:
+          success: true
+          resource_count: 15
+          validation_checks:
+            - "Enhanced networking enabled"
+            - "Placement group configured"
+            - "High-performance storage"
+        cloud_provider: "aws"
+        timeout_seconds: 900
+
+      - name: "auto_scaling_stress_test"
+        description: "Test auto-scaling configuration under load"
+        module_source: "kbrockhoff/compute-instance/terraform"
+        variables:
+          name_prefix: "scaling-test"
+          environment_type: "Production"
+          instance_config:
+            instance_type: "medium"
+            min_size: 1
+            max_size: 50
+            desired_size: 2
+          scaling_config:
+            scale_up_threshold: 70
+            scale_down_threshold: 30
+            scale_up_cooldown: 300
+            scale_down_cooldown: 300
+          monitoring_config:
+            enabled: true
+            detailed_monitoring: true
+        expected_outcome:
+          success: true
+          resource_count: 8
+          validation_checks:
+            - "Auto-scaling policies configured"
+            - "CloudWatch metrics enabled"
+            - "Scaling thresholds set"
+        cloud_provider: "aws"
+
+  error_handling:
+    description: "Error handling and edge case scenarios"
+    scenarios:
+      - name: "resource_limit_exceeded"
+        description: "Test handling of resource limits"
+        module_source: "kbrockhoff/compute-instance/terraform"
+        variables:
+          name_prefix: "limit-test"
+          environment_type: "Production"
+          instance_config:
+            instance_type: "xlarge"
+            min_size: 1000  # Exceeds typical limits
+            max_size: 2000
+            desired_size: 1500
+        expected_outcome:
+          success: false
+          validation_checks:
+            - "Resource limit validation fails"
+            - "Quota exceeded error"
+        cloud_provider: "aws"
+
+      - name: "circular_dependency"
+        description: "Test detection of circular dependencies"
+        module_source: "kbrockhoff/web-application/terraform"
+        variables:
+          name_prefix: "circular-test"
+          environment_type: "Production"
+          # This would create a circular dependency in a real scenario
+          dependency_config:
+            depends_on_self: true
+        expected_outcome:
+          success: false
+          validation_checks:
+            - "Circular dependency detected"
+        cloud_provider: "aws"
+
+      - name: "invalid_cloud_provider"
+        description: "Test handling of invalid cloud provider"
+        module_source: "kbrockhoff/compute-instance/terraform"
+        variables:
+          name_prefix: "invalid-provider"
+          environment_type: "Production"
+          instance_config:
+            instance_type: "medium"
+        expected_outcome:
+          success: false
+          validation_checks:
+            - "Unsupported cloud provider"
+        cloud_provider: "invalid_provider"
+
+# Test execution configuration
+execution_config:
+  parallel_execution: false
+  continue_on_failure: true
+  timeout_default: 300
+  retry_attempts: 1
+  cleanup_on_failure: true
+
+# Expected performance benchmarks
+performance_benchmarks:
+  basic_validation:
+    max_execution_time: 60
+    expected_success_rate: 0.95
+  production_scenarios:
+    max_execution_time: 600
+    expected_success_rate: 0.90
+  cost_optimization:
+    max_execution_time: 120
+    expected_success_rate: 0.95
+  multi_cloud:
+    max_execution_time: 180
+    expected_success_rate: 0.85
+  integration_tests:
+    max_execution_time: 300
+    expected_success_rate: 0.80
+  security_tests:
+    max_execution_time: 240
+    expected_success_rate: 0.90
+  performance_tests:
+    max_execution_time: 900
+    expected_success_rate: 0.75
+  error_handling:
+    max_execution_time: 60
+    expected_success_rate: 0.0  # These are expected to fail

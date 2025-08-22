@@ -1,0 +1,323 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.2.3)'
+        required: true
+        type: string
+
+env:
+  TERRAFORM_VERSION: '1.5.0'
+
+jobs:
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          
+          # Check if this is a prerelease (contains alpha, beta, rc)
+          if [[ "${VERSION}" =~ (alpha|beta|rc) ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "Release version: ${VERSION}"
+          echo "Is prerelease: $(echo ${VERSION} | grep -E '(alpha|beta|rc)' && echo true || echo false)"
+
+      - name: Validate Version Format
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[0-9]+)?)?$ ]]; then
+            echo "Error: Version ${VERSION} does not follow semantic versioning (vX.Y.Z or vX.Y.Z-prerelease)"
+            exit 1
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        run: |
+          find . -name "*.tf" -exec dirname {} \; | sort -u | while read dir; do
+            if [ -f "$dir/versions.tf" ] || [ -f "$dir/main.tf" ]; then
+              echo "Validating $dir"
+              cd "$dir"
+              terraform init -backend=false
+              terraform validate
+              cd - > /dev/null
+            fi
+          done
+
+      - name: Run Tests
+        run: |
+          if [ -f "Makefile" ]; then
+            make test
+          else
+            echo "No Makefile found, skipping tests"
+          fi
+
+      - name: Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy Results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  generate-changelog:
+    name: Generate Changelog
+    runs-on: ubuntu-latest
+    needs: validate
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          echo "Generating changelog from ${PREVIOUS_TAG} to ${VERSION}"
+          
+          # Generate changelog using git log
+          if [ -n "${PREVIOUS_TAG}" ]; then
+            CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          fi
+          
+          # Save changelog to file and output
+          echo "${CHANGELOG}" > changelog.md
+          
+          # Set output (escape newlines for GitHub Actions)
+          {
+            echo 'changelog<<EOF'
+            echo "${CHANGELOG}"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+
+      - name: Upload Changelog
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog
+          path: changelog.md
+
+  update-documentation:
+    name: Update Documentation
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Install terraform-docs
+        run: |
+          curl -sSLo ./terraform-docs.tar.gz https://terraform-docs.io/dl/v0.16.0/terraform-docs-v0.16.0-$(uname)-amd64.tar.gz
+          tar -xzf terraform-docs.tar.gz
+          chmod +x terraform-docs
+          sudo mv terraform-docs /usr/local/bin/
+          terraform-docs --version
+
+      - name: Generate Documentation
+        run: |
+          # Generate documentation for all modules
+          find . -name "*.tf" -exec dirname {} \; | sort -u | while read dir; do
+            if [ -f "$dir/.terraform-docs.yml" ] || [ -f "$dir/main.tf" ]; then
+              echo "Generating docs for $dir"
+              cd "$dir"
+              terraform-docs .
+              cd - > /dev/null
+            fi
+          done
+
+      - name: Check for Documentation Changes
+        id: docs_changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit Documentation Updates
+        if: steps.docs_changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "docs: update documentation for release ${{ needs.validate.outputs.version }}"
+          git push
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [validate, generate-changelog, update-documentation]
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Changelog
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.validate.outputs.version }}
+          release_name: Release ${{ needs.validate.outputs.version }}
+          body_path: changelog.md
+          draft: false
+          prerelease: ${{ needs.validate.outputs.is_prerelease }}
+
+  publish-registry:
+    name: Publish to Terraform Registry
+    runs-on: ubuntu-latest
+    needs: [validate, create-release]
+    if: needs.validate.outputs.is_prerelease == 'false'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Registry Requirements
+        run: |
+          # Check for required files
+          required_files=("README.md" "LICENSE" "main.tf" "variables.tf" "outputs.tf")
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "Error: Required file $file not found"
+              exit 1
+            fi
+          done
+          
+          # Check for examples directory
+          if [ ! -d "examples" ]; then
+            echo "Error: examples directory not found"
+            exit 1
+          fi
+          
+          # Validate that examples contain required files
+          find examples -mindepth 1 -maxdepth 1 -type d | while read example_dir; do
+            if [ ! -f "$example_dir/main.tf" ]; then
+              echo "Error: $example_dir/main.tf not found"
+              exit 1
+            fi
+          done
+
+      - name: Check Version Tag Format
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Version ${VERSION} is not a valid release version for Terraform Registry"
+            echo "Registry requires semantic versioning without prerelease identifiers"
+            exit 1
+          fi
+
+      - name: Notify Registry Publication
+        run: |
+          echo "✅ Release ${{ needs.validate.outputs.version }} is ready for Terraform Registry"
+          echo "The Terraform Registry will automatically detect this release and publish it."
+          echo "Publication typically takes 10-15 minutes after the release is created."
+          echo ""
+          echo "Registry URL: https://registry.terraform.io/modules/kbrockhoff/brockhoff-cloud-docs"
+          echo ""
+          echo "To verify publication:"
+          echo "1. Wait 10-15 minutes"
+          echo "2. Check the registry URL above"
+          echo "3. Verify the new version is listed"
+
+  notify-success:
+    name: Notify Release Success
+    runs-on: ubuntu-latest
+    needs: [validate, create-release, publish-registry]
+    if: always() && needs.create-release.result == 'success'
+    
+    steps:
+      - name: Success Notification
+        run: |
+          echo "🎉 Release ${{ needs.validate.outputs.version }} completed successfully!"
+          echo ""
+          echo "📋 Release Summary:"
+          echo "- Version: ${{ needs.validate.outputs.version }}"
+          echo "- Prerelease: ${{ needs.validate.outputs.is_prerelease }}"
+          echo "- GitHub Release: ✅ Created"
+          echo "- Documentation: ✅ Updated"
+          echo "- Registry Publication: ${{ needs.publish-registry.result == 'success' && '✅ Initiated' || '⏳ Skipped (prerelease)' }}"
+          echo ""
+          echo "🔗 Links:"
+          echo "- Release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.version }}"
+          echo "- Registry: https://registry.terraform.io/modules/kbrockhoff/brockhoff-cloud-docs"
+
+  notify-failure:
+    name: Notify Release Failure
+    runs-on: ubuntu-latest
+    needs: [validate, create-release, publish-registry]
+    if: always() && (needs.validate.result == 'failure' || needs.create-release.result == 'failure')
+    
+    steps:
+      - name: Failure Notification
+        run: |
+          echo "❌ Release ${{ needs.validate.outputs.version || github.ref_name }} failed!"
+          echo ""
+          echo "📋 Failure Summary:"
+          echo "- Validation: ${{ needs.validate.result }}"
+          echo "- Release Creation: ${{ needs.create-release.result }}"
+          echo "- Registry Publication: ${{ needs.publish-registry.result }}"
+          echo ""
+          echo "Please check the workflow logs for details and retry the release."
+          exit 1

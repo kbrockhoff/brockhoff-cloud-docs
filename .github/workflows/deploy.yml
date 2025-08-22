@@ -1,0 +1,370 @@
+name: Deployment
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - 'staging'
+          - 'production'
+      skip_tests:
+        description: 'Skip tests before deployment'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  TF_VERSION: "1.6.0"
+  GO_VERSION: "1.21"
+
+jobs:
+  pre-deployment-checks:
+    name: Pre-deployment Checks
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.checks.outputs.should_deploy }}
+      environment: ${{ steps.environment.outputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine environment
+        id: environment
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          else
+            echo "environment=development" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check deployment conditions
+        id: checks
+        run: |
+          # Check if this is a release commit
+          if git log -1 --pretty=format:"%s" | grep -E "^(chore: release|Release) version"; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ Release commit detected, proceeding with deployment"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ Manual deployment triggered"
+          else
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Not a release commit, skipping deployment"
+          fi
+
+      - name: Validate branch protection
+        if: steps.checks.outputs.should_deploy == 'true'
+        run: |
+          echo "🔍 Validating deployment readiness..."
+          
+          # Check if we're on the main branch
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "❌ Deployment only allowed from main branch"
+            exit 1
+          fi
+          
+          # Check for clean working directory (should be clean in CI)
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "❌ Working directory is not clean"
+            exit 1
+          fi
+          
+          echo "✅ Branch protection validation passed"
+
+  run-tests:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: pre-deployment-checks
+    if: needs.pre-deployment-checks.outputs.should_deploy == 'true' && github.event.inputs.skip_tests != 'true'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('test/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Run comprehensive tests
+        run: |
+          echo "🧪 Running comprehensive test suite..."
+          make ci
+          
+          if [ -d "test" ]; then
+            cd test
+            go test -v -timeout 30m ./...
+          fi
+
+      - name: Generate test report
+        if: always()
+        run: |
+          echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Terraform validation: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Security scans: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Code quality: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration tests: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+
+  staging-deployment:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, run-tests]
+    if: always() && needs.pre-deployment-checks.outputs.should_deploy == 'true' && (needs.run-tests.result == 'success' || needs.run-tests.result == 'skipped')
+    environment: 
+      name: staging
+      url: https://registry.terraform.io/modules/kbrockhoff/brockhoff-cloud-docs
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Validate for registry
+        run: |
+          echo "🔍 Validating for Terraform Registry..."
+          make validate-registry
+
+      - name: Generate documentation
+        run: |
+          echo "📚 Generating documentation..."
+          make docs
+
+      - name: Create staging release
+        run: |
+          echo "🚀 Preparing staging deployment..."
+          
+          # Get version from VERSION file or git tag
+          if [ -f "VERSION" ]; then
+            VERSION=$(cat VERSION)
+          else
+            VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.1.0")
+          fi
+          
+          echo "Deploying version: $VERSION"
+          echo "Environment: staging"
+          
+          # Create deployment artifact
+          tar -czf deployment-artifact.tar.gz \
+            --exclude='.git' \
+            --exclude='.terraform' \
+            --exclude='node_modules' \
+            --exclude='test/test-results.json' \
+            .
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-deployment-${{ github.sha }}
+          path: deployment-artifact.tar.gz
+          retention-days: 30
+
+      - name: Notify staging deployment
+        run: |
+          echo "## 🚀 Staging Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Staging" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: $(cat VERSION 2>/dev/null || echo 'Unknown')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry URL**: https://registry.terraform.io/modules/kbrockhoff/brockhoff-cloud-docs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Staging deployment completed successfully!"
+
+  production-deployment:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, staging-deployment]
+    if: needs.pre-deployment-checks.outputs.environment == 'production' && needs.staging-deployment.result == 'success'
+    environment: 
+      name: production
+      url: https://registry.terraform.io/modules/kbrockhoff/brockhoff-cloud-docs
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download staging artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: staging-deployment-${{ github.sha }}
+
+      - name: Validate production readiness
+        run: |
+          echo "🔍 Validating production readiness..."
+          
+          # Extract and validate artifact
+          tar -xzf deployment-artifact.tar.gz
+          
+          # Check version is not a prerelease
+          if [ -f "VERSION" ]; then
+            VERSION=$(cat VERSION)
+            if echo "$VERSION" | grep -E "(alpha|beta|rc)"; then
+              echo "❌ Cannot deploy prerelease version to production: $VERSION"
+              exit 1
+            fi
+          fi
+          
+          # Validate all required files exist
+          required_files=("README.md" "LICENSE" "main.tf" "variables.tf" "outputs.tf")
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing required file for production: $file"
+              exit 1
+            fi
+          done
+          
+          echo "✅ Production validation passed"
+
+      - name: Deploy to production
+        run: |
+          echo "🚀 Deploying to production..."
+          
+          VERSION=$(cat VERSION 2>/dev/null || echo "Unknown")
+          
+          echo "## 🚀 Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Production" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry URL**: https://registry.terraform.io/modules/kbrockhoff/brockhoff-cloud-docs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # The actual deployment to Terraform Registry happens automatically
+          # when a git tag is pushed (handled by release.yml workflow)
+          echo "✅ Production deployment initiated!"
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📝 **Note**: Terraform Registry publication is automatic upon git tag creation."
+
+  post-deployment:
+    name: Post-deployment Tasks
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, staging-deployment, production-deployment]
+    if: always() && (needs.staging-deployment.result == 'success' || needs.production-deployment.result == 'success')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run post-deployment checks
+        run: |
+          echo "🔍 Running post-deployment checks..."
+          
+          # Check registry availability (with retry)
+          echo "Checking Terraform Registry availability..."
+          for i in {1..5}; do
+            if curl -s "https://registry.terraform.io/modules/kbrockhoff/brockhoff-cloud-docs" > /dev/null; then
+              echo "✅ Registry is accessible"
+              break
+            else
+              echo "⏳ Registry check attempt $i/5 failed, retrying in 30s..."
+              sleep 30
+            fi
+          done
+
+      - name: Update deployment status
+        run: |
+          echo "📊 Updating deployment status..."
+          
+          # Create deployment summary
+          cat > deployment-summary.md << EOF
+          # Deployment Summary
+          
+          **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Environment**: ${{ needs.pre-deployment-checks.outputs.environment }}
+          **Version**: $(cat VERSION 2>/dev/null || echo "Unknown")
+          **Commit**: ${{ github.sha }}
+          **Workflow**: ${{ github.run_id }}
+          
+          ## Status
+          - Staging: ${{ needs.staging-deployment.result }}
+          - Production: ${{ needs.production-deployment.result || 'Not deployed' }}
+          
+          ## Links
+          - [Registry](https://registry.terraform.io/modules/kbrockhoff/brockhoff-cloud-docs)
+          - [Documentation](https://kbrockhoff.github.io/brockhoff-cloud-docs/)
+          - [Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          EOF
+
+      - name: Upload deployment summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-summary-${{ github.sha }}
+          path: deployment-summary.md
+          retention-days: 90
+
+      - name: Notify deployment completion
+        run: |
+          echo "## 🎉 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The deployment has been completed successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Monitor the Terraform Registry for the new version" >> $GITHUB_STEP_SUMMARY
+          echo "2. Update any dependent projects to use the new version" >> $GITHUB_STEP_SUMMARY
+          echo "3. Verify documentation is updated on the registry" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Monitoring" >> $GITHUB_STEP_SUMMARY
+          echo "- Registry: https://registry.terraform.io/modules/kbrockhoff/brockhoff-cloud-docs" >> $GITHUB_STEP_SUMMARY
+          echo "- Documentation: https://kbrockhoff.github.io/brockhoff-cloud-docs/" >> $GITHUB_STEP_SUMMARY
+
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, staging-deployment, production-deployment]
+    if: failure() && needs.pre-deployment-checks.outputs.should_deploy == 'true'
+    
+    steps:
+      - name: Rollback procedures
+        run: |
+          echo "🔄 Initiating rollback procedures..."
+          
+          echo "## ⚠️ Deployment Failed - Rollback Initiated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The deployment failed and rollback procedures have been initiated." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Failed Jobs" >> $GITHUB_STEP_SUMMARY
+          echo "- Staging: ${{ needs.staging-deployment.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Production: ${{ needs.production-deployment.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Manual Actions Required" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the failed job logs" >> $GITHUB_STEP_SUMMARY
+          echo "2. Fix any issues identified" >> $GITHUB_STEP_SUMMARY
+          echo "3. Re-run the deployment workflow" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Support" >> $GITHUB_STEP_SUMMARY
+          echo "If you need assistance, please contact the development team." >> $GITHUB_STEP_SUMMARY

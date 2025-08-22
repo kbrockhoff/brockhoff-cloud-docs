@@ -1,0 +1,79 @@
+# Multi-Cloud Context Integration Example - Terraform Variables
+# Copy this file to terraform.tfvars and customize the values
+
+# Global Configuration (keep short for multi-cloud compatibility)
+namespace   = "myorg"      # Max 10 chars - your organization abbreviation
+environment = "dev"        # Max 8 chars - environment name
+name        = "webapp"     # Max 15 chars - application name
+
+# Global Tags (will be applied consistently across all clouds)
+tags = {
+  Project     = "MultiCloudApp"
+  Owner       = "CloudTeam"
+  CostCenter  = "Engineering"
+  Purpose     = "ContextDemo"
+}
+
+# Environment Configuration
+environment_type = "Development"
+
+# AWS Configuration
+aws_region = "us-east-1"
+create_aws_resources = true    # Set to true to create AWS resources
+
+# Azure Configuration
+azure_region = "East US"
+create_azure_resources = false  # Set to true if you have Azure credentials configured
+
+# GCP Configuration
+gcp_project_id = "my-gcp-project-id"  # Replace with your GCP project ID
+gcp_region = "us-central1"
+create_gcp_resources = false    # Set to true if you have GCP credentials configured
+
+# Example: AWS Only Deployment
+# create_aws_resources = true
+# create_azure_resources = false
+# create_gcp_resources = false
+
+# Example: Multi-Cloud Deployment (requires all provider credentials)
+# create_aws_resources = true
+# create_azure_resources = true
+# create_gcp_resources = true
+# gcp_project_id = "your-actual-project-id"
+
+# Example: Production Multi-Cloud Configuration
+# namespace = "prod"
+# environment = "prod"
+# name = "webapp"
+# environment_type = "Production"
+# 
+# tags = {
+#   Project = "ProductionApp"
+#   Owner = "PlatformTeam"
+#   CostCenter = "Production"
+#   Environment = "Production"
+#   Compliance = "SOC2"
+# }
+#
+# # Enable all clouds for production
+# create_aws_resources = true
+# create_azure_resources = true
+# create_gcp_resources = true
+
+# Example: Development Single-Cloud Configuration
+# namespace = "dev"
+# environment = "dev"
+# name = "test"
+# environment_type = "Development"
+#
+# # Only AWS for development to save costs
+# create_aws_resources = true
+# create_azure_resources = false
+# create_gcp_resources = false
+
+# Notes:
+# 1. Keep namespace, environment, and name short for multi-cloud compatibility
+# 2. Only enable cloud providers you have credentials configured for
+# 3. GCP requires a valid project ID to be specified
+# 4. Azure and GCP resources are disabled by default to avoid credential requirements
+# 5. The example will show naming and tagging patterns even with resources disabled
