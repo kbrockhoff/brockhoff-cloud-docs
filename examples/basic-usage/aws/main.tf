@@ -18,54 +18,144 @@ provider "aws" {
 
 # Context module for standardized naming and tagging
 module "context" {
-  source = "kbrockhoff/external-context/terraform"
+  source = "kbrockhoff/context/external"
 
-  name           = var.name
-  environment    = var.environment
-  cloud_provider = "aws"
-
-  # Override context if provided
-  context = var.context
+  name        = var.name
+  environment = var.environment
 }
 
-# Basic compute module following standardized interface
-module "compute" {
-  source = "../../../modules/services/compute/aws"
-
-  # Standard variables from context
-  name_prefix      = module.context.name_prefix
-  tags             = module.context.tags
-  data_tags        = module.context.data_tags
-  environment_type = var.environment_type
-
-  # Compute-specific configuration
-  instance_type = var.instance_type
-  ami_id        = var.ami_id != "" ? var.ami_id : data.aws_ami.amazon_linux.id
-
-  # Standard configuration objects
-  encryption_config = {
-    create_kms_key               = var.create_kms_key
-    kms_key_id                   = ""
-    kms_key_deletion_window_days = var.environment_type == "Development" ? 7 : 30
+# Map instance types to actual AWS instance types
+locals {
+  instance_type_map = {
+    small  = "t3.micro"
+    medium = "t3.small"
+    large  = "t3.medium"
   }
 
-  monitoring_config = {
-    enabled = var.monitoring_enabled
+  actual_instance_type = local.instance_type_map[var.instance_type]
+}
+
+# Security Group
+resource "aws_security_group" "main" {
+  name_prefix = "${module.context.name_prefix}-"
+  vpc_id      = var.vpc_id != "" ? var.vpc_id : data.aws_vpc.default.id
+
+  # SSH access
+  dynamic "ingress" {
+    for_each = var.ssh_key_name != "" ? [1] : []
+    content {
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = var.allowed_cidr_blocks
+    }
   }
 
-  alarms_config = {
-    enabled          = var.alarms_enabled
-    create_sns_topic = true
-    sns_topic_arn    = ""
+  # HTTP access
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_cidr_blocks
   }
 
-  # Network configuration
-  vpc_id    = var.vpc_id != "" ? var.vpc_id : data.aws_vpc.default.id
-  subnet_id = var.subnet_id != "" ? var.subnet_id : data.aws_subnets.default.ids[0]
+  # HTTPS access
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_cidr_blocks
+  }
 
-  # Security configuration
-  allowed_cidr_blocks = var.allowed_cidr_blocks
-  ssh_key_name        = var.ssh_key_name
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = module.context.tags
+}
+
+# KMS Key for encryption (if enabled)
+resource "aws_kms_key" "main" {
+  count = var.create_kms_key ? 1 : 0
+
+  description             = "KMS key for ${module.context.name_prefix}"
+  deletion_window_in_days = var.environment_type == "Development" ? 7 : 30
+
+  tags = module.context.tags
+}
+
+resource "aws_kms_alias" "main" {
+  count = var.create_kms_key ? 1 : 0
+
+  name          = "alias/${module.context.name_prefix}"
+  target_key_id = aws_kms_key.main[0].key_id
+}
+
+# EC2 Instance
+resource "aws_instance" "main" {
+  ami           = var.ami_id != "" ? var.ami_id : data.aws_ami.amazon_linux.id
+  instance_type = local.actual_instance_type
+  key_name      = var.ssh_key_name != "" ? var.ssh_key_name : null
+
+  vpc_security_group_ids = [aws_security_group.main.id]
+  subnet_id              = var.subnet_id != "" ? var.subnet_id : data.aws_subnets.default.ids[0]
+
+  # Enable detailed monitoring if requested
+  monitoring = var.monitoring_enabled
+
+  # Encrypt EBS volumes if KMS key is created
+  dynamic "root_block_device" {
+    for_each = var.create_kms_key ? [1] : []
+    content {
+      encrypted   = true
+      kms_key_id  = aws_kms_key.main[0].arn
+      volume_type = "gp3"
+      volume_size = 20
+    }
+  }
+
+  # User data for basic setup
+  user_data = base64encode(templatefile("${path.module}/user-data.sh", {
+    name_prefix = module.context.name_prefix
+  }))
+
+  tags = merge(module.context.tags, {
+    Name = "${module.context.name_prefix}-instance"
+  })
+}
+
+# SNS Topic for alarms (if enabled)
+resource "aws_sns_topic" "alarms" {
+  count = var.alarms_enabled ? 1 : 0
+
+  name = "${module.context.name_prefix}-alarms"
+
+  tags = module.context.tags
+}
+
+# CloudWatch Alarms (if enabled)
+resource "aws_cloudwatch_metric_alarm" "high_cpu" {
+  count = var.alarms_enabled ? 1 : 0
+
+  alarm_name          = "${module.context.name_prefix}-high-cpu"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = "120"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "This metric monitors ec2 cpu utilization"
+  alarm_actions       = [aws_sns_topic.alarms[0].arn]
+
+  dimensions = {
+    InstanceId = aws_instance.main.id
+  }
+
+  tags = module.context.tags
 }
 
 # Data sources for defaults

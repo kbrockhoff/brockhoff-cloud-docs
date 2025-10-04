@@ -4,66 +4,89 @@
 # Primary resource outputs
 output "instance_id" {
   description = "EC2 instance ID"
-  value       = module.compute.instance_id
+  value       = aws_instance.main.id
 }
 
 output "instance_arn" {
   description = "EC2 instance ARN"
-  value       = module.compute.instance_arn
+  value       = aws_instance.main.arn
 }
 
 output "public_ip" {
   description = "Public IP address of the instance"
-  value       = module.compute.public_ip
+  value       = aws_instance.main.public_ip
 }
 
 output "private_ip" {
   description = "Private IP address of the instance"
-  value       = module.compute.private_ip
+  value       = aws_instance.main.private_ip
 }
 
 output "security_group_id" {
   description = "Security group ID"
-  value       = module.compute.security_group_id
+  value       = aws_security_group.main.id
 }
 
 # Standard encryption outputs
 output "kms_key_id" {
   description = "KMS key ID used for encryption"
-  value       = module.compute.kms_key_id
+  value       = var.create_kms_key ? aws_kms_key.main[0].key_id : null
 }
 
 output "kms_key_arn" {
   description = "KMS key ARN used for encryption"
-  value       = module.compute.kms_key_arn
+  value       = var.create_kms_key ? aws_kms_key.main[0].arn : null
 }
 
 # Standard monitoring outputs
 output "alarm_sns_topic_arn" {
   description = "SNS topic ARN for alarms"
-  value       = module.compute.alarm_sns_topic_arn
+  value       = var.alarms_enabled ? aws_sns_topic.alarms[0].arn : null
 }
 
-# Standard cost estimation outputs
+# Standard cost estimation outputs (simplified)
 output "monthly_cost_estimate" {
   description = "Estimated monthly cost in USD"
-  value       = module.compute.monthly_cost_estimate
+  value       = "~$8.50 (t3.micro in us-west-2)"
 }
 
 output "cost_breakdown" {
   description = "Detailed cost breakdown by service"
-  value       = module.compute.cost_breakdown
+  value = {
+    compute       = "~$8.50/month (t3.micro)"
+    storage       = "~$2.00/month (20GB gp3)"
+    data_transfer = "~$0.00/month (first 1GB free)"
+  }
 }
 
-# Compliance and governance outputs
+# Compliance and governance outputs (simplified)
 output "compliance_report" {
   description = "Well-architected framework compliance assessment"
-  value       = module.compute.compliance_report
+  value = {
+    security = {
+      encryption_at_rest = var.create_kms_key
+      security_groups    = true
+      iam_roles          = false
+    }
+    reliability = {
+      multi_az = false
+      backup   = false
+    }
+    cost_optimization = {
+      right_sizing       = true
+      reserved_instances = false
+    }
+  }
 }
 
 output "governance_metadata" {
   description = "Governance and audit metadata"
-  value       = module.compute.governance_metadata
+  value = {
+    created_by            = "terraform"
+    module_version        = "basic-usage-v1.0"
+    compliance_frameworks = ["AWS Well-Architected"]
+    tags                  = module.context.tags
+  }
 }
 
 # Context outputs for reference
@@ -80,18 +103,24 @@ output "tags" {
 # Connection information
 output "ssh_connection" {
   description = "SSH connection command (if key pair configured)"
-  value       = var.ssh_key_name != "" ? "ssh -i ~/.ssh/${var.ssh_key_name}.pem ec2-user@${module.compute.public_ip}" : "SSH key not configured"
+  value       = var.ssh_key_name != "" ? "ssh -i ~/.ssh/${var.ssh_key_name}.pem ec2-user@${aws_instance.main.public_ip}" : "SSH key not configured"
+}
+
+output "web_url" {
+  description = "URL to access the web application"
+  value       = "http://${aws_instance.main.public_ip}"
 }
 
 # Resource summary
 output "resource_summary" {
   description = "Summary of created resources"
   value = {
-    instance_type  = var.instance_type
-    region         = var.aws_region
-    environment    = var.environment
-    monitoring     = var.monitoring_enabled
-    encryption     = var.create_kms_key
-    estimated_cost = module.compute.monthly_cost_estimate
+    instance_type        = var.instance_type
+    actual_instance_type = local.actual_instance_type
+    region               = var.aws_region
+    environment          = var.environment
+    monitoring           = var.monitoring_enabled
+    encryption           = var.create_kms_key
+    estimated_cost       = "~$8.50/month"
   }
 }

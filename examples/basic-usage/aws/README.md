@@ -1,6 +1,6 @@
 # AWS Basic Compute Example
 
-This example demonstrates a simple EC2 instance deployment using the Brockhoff Cloud standardized module interface. It showcases the consistent patterns used across all cloud providers while leveraging AWS-specific optimizations.
+This example demonstrates a simple EC2 instance deployment using the Brockhoff Cloud standardized naming and tagging patterns with the `kbrockhoff/context/external` module. It showcases consistent infrastructure patterns while leveraging AWS-specific optimizations.
 
 ## Architecture
 
@@ -31,11 +31,12 @@ This example demonstrates a simple EC2 instance deployment using the Brockhoff C
 
 ## Resources Created
 
-- **EC2 Instance**: Single compute instance with security hardening
-- **Security Group**: Network access controls with least-privilege rules
-- **KMS Key**: Encryption key for EBS volumes and snapshots
-- **CloudWatch Alarms**: Optional monitoring and alerting (disabled by default)
+- **EC2 Instance**: Single compute instance with security hardening and Apache web server
+- **Security Group**: Network access controls with least-privilege rules (SSH, HTTP, HTTPS)
+- **KMS Key**: Optional encryption key for EBS volumes (enabled by default)
+- **CloudWatch Alarms**: Optional CPU monitoring and alerting (disabled by default)
 - **SNS Topic**: Optional notification endpoint for alarms
+- **Context Module**: Standardized naming and tagging using `kbrockhoff/context/external`
 
 ## Prerequisites
 
