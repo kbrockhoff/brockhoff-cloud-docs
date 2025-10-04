@@ -1,6 +1,8 @@
 # Contributing to Brockhoff Cloud Terraform Modules
 
-Thank you for your interest in contributing to the Brockhoff Cloud Terraform module suite! This document provides comprehensive guidelines and information for contributors.
+Thank you for your interest in contributing to the Brockhoff Cloud Terraform
+module suite! This document provides comprehensive guidelines and information
+for contributors.
 
 ## Table of Contents
 
@@ -8,22 +10,29 @@ Thank you for your interest in contributing to the Brockhoff Cloud Terraform mod
 2. [How to Contribute](#how-to-contribute)
 3. [Development Setup](#development-setup)
 4. [Coding Standards](#coding-standards)
-5. [Testing Guidelines](#testing-guidelines)
-6. [Documentation Requirements](#documentation-requirements)
+5. [Testing](#testing)
+6. [Documentation](#documentation)
 7. [Release Process](#release-process)
 8. [Getting Help](#getting-help)
 
 ## Code of Conduct
 
-This project adheres to a code of conduct based on the [Contributor Covenant](https://www.contributor-covenant.org/). By participating, you are expected to uphold this code:
+This project adheres to a code of conduct based on the
+[Contributor Covenant](https://www.contributor-covenant.org/). By participating,
+you are expected to uphold this code:
 
 ### Our Pledge
 
-We pledge to make participation in our project a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity and expression, level of experience, nationality, personal appearance, race, religion, or sexual identity and orientation.
+We pledge to make participation in our project a harassment-free experience for
+everyone, regardless of age, body size, disability, ethnicity, gender identity
+and expression, level of experience, nationality, personal appearance, race,
+religion, or sexual identity and orientation.
 
 ### Our Standards
 
-Examples of behavior that contributes to creating a positive environment include:
+Examples of behavior that contributes to creating a positive environment
+include:
+
 - Using welcoming and inclusive language
 - Being respectful of differing viewpoints and experiences
 - Gracefully accepting constructive criticism
@@ -32,7 +41,9 @@ Examples of behavior that contributes to creating a positive environment include
 
 ### Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the project maintainers. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be
+reported by contacting the project maintainers. All complaints will be
+reviewed and investigated promptly and fairly.
 
 ## How to Contribute
 
@@ -41,24 +52,28 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be repor
 We welcome several types of contributions:
 
 #### 🐛 Bug Reports
+
 - Use the bug report template
 - Include steps to reproduce
 - Provide Terraform configuration examples
 - Include error messages and logs
 
 #### 💡 Feature Requests
+
 - Use the feature request template
 - Describe the use case and benefits
 - Consider implementation complexity
 - Discuss alternatives you've considered
 
 #### 📖 Documentation Improvements
+
 - Fix typos and grammatical errors
 - Improve clarity and examples
 - Add missing documentation
 - Update outdated information
 
 #### 🔧 Code Contributions
+
 - New modules or submodules
 - Bug fixes and improvements
 - Performance optimizations
@@ -97,12 +112,14 @@ A clear and concise description of what you expected to happen.
 # Your Terraform configuration here
 ```
 
-**Error Output**
-```
+#### Error Output
+
+```text
 # Complete error message here
 ```
 
-**Environment**
+#### Environment
+
 - Terraform version: [e.g. 1.11.4]
 - Provider version: [e.g. aws 5.0.0]
 - OS: [e.g. macOS 13.0]
@@ -110,7 +127,8 @@ A clear and concise description of what you expected to happen.
 
 **Additional context**
 Add any other context about the problem here.
-```
+
+```markdown
 
 ### Submitting Changes
 
@@ -124,7 +142,8 @@ Add any other context about the problem here.
 6. **Ensure all tests pass**: `make test`
 7. **Run linting**: `make lint`
 8. **Generate documentation**: `make docs`
-9. **Commit with clear messages** following [conventional commits](https://www.conventionalcommits.org/)
+9. **Commit with clear messages** following
+   [conventional commits](https://www.conventionalcommits.org/)
 10. **Submit a pull request** using the provided template
 
 #### Pull Request Template
@@ -136,7 +155,8 @@ Brief description of changes and motivation.
 ## Type of Change
 - [ ] Bug fix (non-breaking change which fixes an issue)
 - [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Breaking change (fix or feature that would cause existing functionality
+  to not work as expected)
 - [ ] Documentation update
 
 ## Testing
@@ -166,6 +186,7 @@ Install the following tools:
 #### Required Tools
 
 1. **Terraform** >= 1.11.0
+
    ```bash
    # macOS
    brew install terraform
@@ -177,6 +198,7 @@ Install the following tools:
    ```
 
 2. **Go** >= 1.21 (for testing)
+
    ```bash
    # macOS
    brew install go
@@ -188,6 +210,7 @@ Install the following tools:
    ```
 
 3. **terraform-docs** (for documentation generation)
+
    ```bash
    # macOS
    brew install terraform-docs
@@ -200,15 +223,18 @@ Install the following tools:
    ```
 
 4. **tflint** (for Terraform linting)
+
    ```bash
    # macOS
    brew install tflint
    
    # Linux
+   # markdownlint-disable-next-line MD013
    curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
    ```
 
 5. **Make** (build automation)
+
    ```bash
    # macOS (usually pre-installed)
    xcode-select --install
@@ -221,18 +247,22 @@ Install the following tools:
 #### Optional Tools
 
 1. **pre-commit** (for git hooks)
+
    ```bash
    pip install pre-commit
    ```
 
 2. **trivy** (for security scanning)
+
    ```bash
    # macOS
    brew install trivy
    
    # Linux
    sudo apt-get install wget apt-transport-https gnupg lsb-release
-   wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+   wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+     | sudo apt-key add -
+   # markdownlint-disable-next-line MD013
    echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
    sudo apt-get update
    sudo apt-get install trivy
@@ -241,27 +271,32 @@ Install the following tools:
 ### Local Development
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/kbrockhoff/brockhoff-cloud-docs.git
    cd brockhoff-cloud-docs
    ```
 
 2. **Install development dependencies**:
+
    ```bash
    make install-tools
    ```
 
 3. **Initialize Terraform**:
+
    ```bash
    make init
    ```
 
 4. **Run tests to verify setup**:
+
    ```bash
    make test
    ```
 
 5. **Generate documentation**:
+
    ```bash
    make docs
    ```
@@ -324,7 +359,8 @@ make install-tools # Install development tools
 ### Module Structure
 
 Each module must follow this structure:
-```
+
+```text
 module-name/
 ├── main.tf                 # Primary resource definitions
 ├── variables.tf            # Input variables with validation
@@ -376,6 +412,7 @@ module-name/
 ### Cloud Provider Support
 
 When adding features:
+
 - Implement for all three cloud providers (AWS, Azure, GCP) when possible
 - Use provider-specific best practices
 - Maintain consistent interfaces across providers
@@ -384,6 +421,7 @@ When adding features:
 ### Well-Architected Framework Compliance
 
 Ensure all modules follow:
+
 - **AWS Well-Architected Framework** principles
 - **Azure Well-Architected Framework** principles  
 - **Google Cloud Architecture Framework** principles
@@ -398,6 +436,7 @@ Ensure all modules follow:
 ## AI Agent Integration
 
 When developing modules:
+
 - Include comprehensive ai-metadata.yaml files
 - Use structured, predictable interfaces
 - Provide clear validation rules and error messages
@@ -409,6 +448,7 @@ When developing modules:
 ### Versioning
 
 We use [Semantic Versioning](https://semver.org/):
+
 - **MAJOR**: Breaking changes
 - **MINOR**: New features (backward compatible)
 - **PATCH**: Bug fixes (backward compatible)
@@ -416,6 +456,7 @@ We use [Semantic Versioning](https://semver.org/):
 ### Release Checklist
 
 Before releasing:
+
 - [ ] All tests pass
 - [ ] Documentation is updated
 - [ ] CHANGELOG.md is updated
@@ -434,6 +475,7 @@ Before releasing:
 ## Recognition
 
 Contributors will be recognized in:
+
 - CHANGELOG.md for their contributions
 - GitHub contributors list
 - Release notes for significant contributions
