@@ -58,16 +58,16 @@ output "compliance_report" {
   description = "Well-architected framework compliance assessment"
   value = {
     security = {
-      encryption_at_rest = var.create_key_vault
+      encryption_at_rest      = var.create_key_vault
       network_security_groups = true
-      iam_roles = false
+      iam_roles               = false
     }
     reliability = {
       availability_zones = false
-      backup = false
+      backup             = false
     }
     cost_optimization = {
-      right_sizing = true
+      right_sizing       = true
       reserved_instances = false
     }
   }
@@ -76,10 +76,10 @@ output "compliance_report" {
 output "governance_metadata" {
   description = "Governance and audit metadata"
   value = {
-    created_by = "terraform"
-    module_version = "basic-usage-v1.0"
+    created_by            = "terraform"
+    module_version        = "basic-usage-v1.0"
     compliance_frameworks = ["Azure Well-Architected Framework"]
-    tags = module.context.tags
+    tags                  = module.context.tags
   }
 }
 

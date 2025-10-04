@@ -59,15 +59,15 @@ output "compliance_report" {
   value = {
     security = {
       encryption_at_rest = var.create_kms_key
-      firewall_rules = true
-      iam_roles = false
+      firewall_rules     = true
+      iam_roles          = false
     }
     reliability = {
       multi_zone = false
-      backup = false
+      backup     = false
     }
     cost_optimization = {
-      right_sizing = true
+      right_sizing          = true
       preemptible_instances = false
     }
   }
@@ -76,10 +76,10 @@ output "compliance_report" {
 output "governance_metadata" {
   description = "Governance and audit metadata"
   value = {
-    created_by = "terraform"
-    module_version = "basic-usage-v1.0"
+    created_by            = "terraform"
+    module_version        = "basic-usage-v1.0"
     compliance_frameworks = ["Google Cloud Architecture Framework"]
-    labels = module.context.tags
+    labels                = module.context.tags
   }
 }
 
