@@ -69,7 +69,6 @@ module "compute" {
   # Network configuration
   vnet_name           = var.vnet_name
   subnet_name         = var.subnet_name
-  resource_group_name = var.resource_group_name != "" ? var.resource_group_name : azurerm_resource_group.main[0].name
   
   # Security configuration
   allowed_cidr_blocks = var.allowed_cidr_blocks

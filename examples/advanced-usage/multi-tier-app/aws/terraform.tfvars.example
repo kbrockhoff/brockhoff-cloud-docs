@@ -1,0 +1,19 @@
+# Multi-Tier Web Application - AWS Configuration Example
+# Copy this file to terraform.tfvars and customize the values
+
+# Application Configuration
+name             = "multi-tier-app"
+environment      = "prod"
+environment_type = "Production"
+
+# Network Configuration
+cidr_primary       = "10.0.0.0/16"
+availability_zones = ["us-west-2a", "us-west-2b", "us-west-2c"]
+
+# Additional Tags
+tags = {
+  Project     = "MultiTierApp"
+  Owner       = "DevOps"
+  Environment = "Production"
+  CostCenter  = "Engineering"
+}
