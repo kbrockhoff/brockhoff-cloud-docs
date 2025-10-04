@@ -18,12 +18,12 @@ output "pillar_scores" {
 output "compliance_status" {
   description = "Overall compliance status and details"
   value = var.enabled ? {
-    compliant              = local.is_compliant
-    overall_score         = local.overall_score
-    minimum_required      = local.minimum_score
-    environment_type      = var.environment_type
-    total_controls        = local.governance_metadata.total_controls
-    implemented_controls  = local.governance_metadata.implemented_controls
+    compliant            = local.is_compliant
+    overall_score        = local.overall_score
+    minimum_required     = local.minimum_score
+    environment_type     = var.environment_type
+    total_controls       = local.governance_metadata.total_controls
+    implemented_controls = local.governance_metadata.implemented_controls
     implementation_percentage = local.governance_metadata.total_controls > 0 ? (
       local.governance_metadata.implemented_controls / local.governance_metadata.total_controls * 100
     ) : 0
@@ -72,7 +72,7 @@ output "evidence_summary" {
       for field, evidence in var.resource_evidence : field if !evidence.found
     ])
     evidence_coverage_percentage = length(var.resource_evidence) > 0 ? (
-      length([for field, evidence in var.resource_evidence : field if evidence.found]) / 
+      length([for field, evidence in var.resource_evidence : field if evidence.found]) /
       length(var.resource_evidence) * 100
     ) : 0
   } : null

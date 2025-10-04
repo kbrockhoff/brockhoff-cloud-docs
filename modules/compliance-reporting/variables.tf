@@ -22,7 +22,7 @@ variable "cloud_provider" {
   type        = string
   default     = ""
   validation {
-    condition = contains(["", "aws", "azure", "gcp"], var.cloud_provider)
+    condition     = contains(["", "aws", "azure", "gcp"], var.cloud_provider)
     error_message = "Cloud provider must be one of: aws, azure, gcp, or empty for auto-detection."
   }
 }
@@ -45,13 +45,13 @@ variable "context" {
     cloud_provider = optional(string, "")
     environment    = optional(string, "")
     name_prefix    = optional(string, "")
-    tags          = optional(map(string), {})
+    tags           = optional(map(string), {})
   })
   default = {
     cloud_provider = ""
     environment    = ""
     name_prefix    = ""
-    tags          = {}
+    tags           = {}
   }
 }
 

@@ -26,7 +26,7 @@ variable "cloud_provider" {
   type        = string
   default     = null
   validation {
-    condition = var.cloud_provider == null || contains(["aws", "azure", "gcp"], var.cloud_provider)
+    condition     = var.cloud_provider == null || contains(["aws", "azure", "gcp"], var.cloud_provider)
     error_message = "Cloud provider must be one of: aws, azure, gcp."
   }
 }
