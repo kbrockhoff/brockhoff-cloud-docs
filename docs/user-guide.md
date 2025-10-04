@@ -18,7 +18,7 @@ This comprehensive guide helps you get started with Brockhoff Cloud Terraform mo
 
 Before using Brockhoff Cloud modules, ensure you have:
 
-- **Terraform** >= 1.5.0 installed
+- **Terraform** >= 1.11.0 installed
 - **Cloud Provider CLI** tools configured:
   - AWS CLI with valid credentials
   - Azure CLI with valid subscription
@@ -45,7 +45,7 @@ Let's deploy a simple web server on AWS:
 ```hcl
 # main.tf
 terraform {
-  required_version = ">= 1.5"
+  required_version = ">= 1.11"
   required_providers {
     aws = {
       source  = "hashicorp/aws"

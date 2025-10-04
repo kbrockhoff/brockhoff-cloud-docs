@@ -36,7 +36,7 @@ The module suite follows a three-tier architecture:
 
 ### Prerequisites
 
-- [Terraform](https://www.terraform.io/downloads.html) >= 1.5.0
+- [Terraform](https://www.terraform.io/downloads.html) >= 1.11.0
 - Cloud provider CLI tools (AWS CLI, Azure CLI, or gcloud)
 - Appropriate cloud provider credentials
 
@@ -248,7 +248,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ### Terraform Versions
 
-- Terraform >= 1.5.0
+- Terraform >= 1.11.0
 - Provider versions as specified in each module's `versions.tf`
 
 ### Cloud Provider Support

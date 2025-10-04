@@ -103,7 +103,7 @@ A clear and concise description of what you expected to happen.
 ```
 
 **Environment**
-- Terraform version: [e.g. 1.5.0]
+- Terraform version: [e.g. 1.11.4]
 - Provider version: [e.g. aws 5.0.0]
 - OS: [e.g. macOS 13.0]
 - Module version: [e.g. 1.2.3]
@@ -165,14 +165,14 @@ Install the following tools:
 
 #### Required Tools
 
-1. **Terraform** >= 1.5.0
+1. **Terraform** >= 1.11.0
    ```bash
    # macOS
    brew install terraform
    
    # Linux
-   wget https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
-   unzip terraform_1.5.0_linux_amd64.zip
+   wget https://releases.hashicorp.com/terraform/1.11.4/terraform_1.11.4_linux_amd64.zip
+   unzip terraform_1.11.4_linux_amd64.zip
    sudo mv terraform /usr/local/bin/
    ```
 

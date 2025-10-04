@@ -54,7 +54,7 @@ choco install terraform
 **Verify Installation**:
 ```bash
 terraform version
-# Should show: Terraform v1.5.0 or later
+# Should show: Terraform v1.11.0 or later
 ```
 
 #### 2. Go (for testing)

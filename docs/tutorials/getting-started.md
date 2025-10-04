@@ -15,7 +15,7 @@ This step-by-step tutorial will guide you through deploying your first infrastru
 
 ### Required Tools
 
-1. **Terraform** >= 1.5.0
+1. **Terraform** >= 1.11.0
    ```bash
    # Install via Homebrew (macOS)
    brew install terraform
@@ -144,7 +144,7 @@ Create `main.tf` with your infrastructure definition:
 ```hcl
 # main.tf
 terraform {
-  required_version = ">= 1.5"
+  required_version = ">= 1.11"
   
   required_providers {
     aws = {

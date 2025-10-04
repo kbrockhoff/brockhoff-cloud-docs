@@ -3,7 +3,7 @@
 # consistently across AWS, Azure, and GCP with provider-specific constraints
 
 terraform {
-  required_version = ">= 1.5"
+  required_version = ">= 1.11"
 
   required_providers {
     aws = {

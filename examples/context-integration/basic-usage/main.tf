@@ -3,7 +3,7 @@
 # into a Brockhoff Cloud module for consistent naming and tagging.
 
 terraform {
-  required_version = ">= 1.5"
+  required_version = ">= 1.11"
 
   required_providers {
     aws = {

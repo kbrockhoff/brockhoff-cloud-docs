@@ -2,7 +2,7 @@
 # This example demonstrates the multi-cloud context validation module
 
 terraform {
-  required_version = ">= 1.5"
+  required_version = ">= 1.11"
 
   required_providers {
     aws = {
