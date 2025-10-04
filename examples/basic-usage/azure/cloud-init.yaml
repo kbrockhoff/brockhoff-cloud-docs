@@ -1,0 +1,74 @@
+#cloud-config
+# Basic setup script for Azure Virtual Machine
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - apache2
+  - htop
+  - curl
+  - wget
+
+write_files:
+  - path: /var/www/html/index.html
+    content: |
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <title>Basic Azure Compute Example</title>
+          <style>
+              body { font-family: Arial, sans-serif; margin: 40px; }
+              .container { max-width: 800px; margin: 0 auto; }
+              .header { text-align: center; margin-bottom: 40px; }
+              .info { background-color: #f0f0f0; padding: 20px; border-radius: 5px; }
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <div class="header">
+                  <h1>🚀 Basic Azure Compute Example</h1>
+                  <p>Deployed with Brockhoff Cloud Terraform Modules</p>
+              </div>
+              
+              <div class="info">
+                  <h3>Instance Information</h3>
+                  <p><strong>Name Prefix:</strong> ${name_prefix}</p>
+                  <p><strong>VM Name:</strong> <span id="vm-name">Loading...</span></p>
+                  <p><strong>Location:</strong> <span id="location">Loading...</span></p>
+                  <p><strong>VM Size:</strong> <span id="vm-size">Loading...</span></p>
+              </div>
+          </div>
+          
+          <script>
+              // Fetch instance metadata
+              fetch('http://169.254.169.254/metadata/instance/compute/name?api-version=2021-02-01&format=text', {
+                  headers: {'Metadata': 'true'}
+              })
+                  .then(response => response.text())
+                  .then(data => document.getElementById('vm-name').textContent = data)
+                  .catch(error => document.getElementById('vm-name').textContent = 'Unable to fetch');
+                  
+              fetch('http://169.254.169.254/metadata/instance/compute/location?api-version=2021-02-01&format=text', {
+                  headers: {'Metadata': 'true'}
+              })
+                  .then(response => response.text())
+                  .then(data => document.getElementById('location').textContent = data)
+                  .catch(error => document.getElementById('location').textContent = 'Unable to fetch');
+                  
+              fetch('http://169.254.169.254/metadata/instance/compute/vmSize?api-version=2021-02-01&format=text', {
+                  headers: {'Metadata': 'true'}
+              })
+                  .then(response => response.text())
+                  .then(data => document.getElementById('vm-size').textContent = data)
+                  .catch(error => document.getElementById('vm-size').textContent = 'Unable to fetch');
+          </script>
+      </body>
+      </html>
+    owner: www-data:www-data
+    permissions: '0644'
+
+runcmd:
+  - systemctl start apache2
+  - systemctl enable apache2
+  - echo "Setup completed at $(date)" >> /var/log/cloud-init-output.log
