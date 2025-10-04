@@ -1,9 +1,9 @@
 # Multi-Cloud Context Integration Example Outputs
 
 # Global Context Outputs
-output "global_context_id" {
-  description = "Global context ID used across all clouds"
-  value       = module.global_context.id
+output "global_context_environment_type" {
+  description = "Global context environment type used across all clouds"
+  value       = module.global_context.environment_type
 }
 
 output "global_context_tags" {
@@ -12,9 +12,9 @@ output "global_context_tags" {
 }
 
 # AWS Context and Resource Outputs
-output "aws_context_id" {
-  description = "AWS-specific context ID"
-  value       = module.aws_context.id
+output "aws_context_environment_type" {
+  description = "AWS-specific context environment type"
+  value       = module.aws_context.environment_type
 }
 
 output "aws_context_tags" {
@@ -43,9 +43,9 @@ output "aws_iam_role_arn" {
 }
 
 # Azure Context and Resource Outputs
-output "azure_context_id" {
-  description = "Azure-specific context ID"
-  value       = module.azure_context.id
+output "azure_context_environment_type" {
+  description = "Azure-specific context environment type"
+  value       = module.azure_context.environment_type
 }
 
 output "azure_context_tags" {
@@ -74,9 +74,9 @@ output "azure_storage_account_id" {
 }
 
 # GCP Context and Resource Outputs
-output "gcp_context_id" {
-  description = "GCP-specific context ID"
-  value       = module.gcp_context.id
+output "gcp_context_environment_type" {
+  description = "GCP-specific context environment type"
+  value       = module.gcp_context.environment_type
 }
 
 output "gcp_context_labels" {
@@ -158,7 +158,7 @@ output "validation_results" {
 output "debug_info" {
   description = "Debug information for multi-cloud context integration"
   value = {
-    global_context_enabled = module.global_context.enabled
+    global_context_enabled = module.global_context.context.enabled
     aws_enabled            = var.create_aws_resources
     azure_enabled          = var.create_azure_resources
     gcp_enabled            = var.create_gcp_resources
@@ -174,16 +174,16 @@ output "debug_info" {
     # Cloud-specific configurations
     cloud_configs = {
       aws = {
-        delimiter  = module.aws_context.delimiter
-        label_case = "none"
+        name_prefix = module.aws_context.name_prefix
+        environment = module.aws_context.context.environment
       }
       azure = {
-        delimiter  = module.azure_context.delimiter
-        label_case = "none"
+        name_prefix = module.azure_context.name_prefix
+        environment = module.azure_context.context.environment
       }
       gcp = {
-        delimiter  = module.gcp_context.delimiter
-        label_case = "lower"
+        name_prefix = module.gcp_context.name_prefix
+        environment = module.gcp_context.context.environment
       }
     }
   }
