@@ -6,9 +6,9 @@ output "validation_summary" {
   value = {
     all_validations_passed = local.all_validations_passed
     validation_errors      = local.all_validation_errors
-    enabled_validations    = [
+    enabled_validations = [
       for provider in ["aws", "azure", "gcp", "auto"] :
-      provider if (
+      provider if(
         (provider == "aws" && var.enable_aws_validation) ||
         (provider == "azure" && var.enable_azure_validation) ||
         (provider == "gcp" && var.enable_gcp_validation) ||
@@ -119,11 +119,11 @@ output "demo_resources" {
     aws_s3_bucket = var.enable_aws_validation ? (
       length(aws_s3_bucket.demo) > 0 ? aws_s3_bucket.demo[0].bucket : null
     ) : null
-    
+
     azure_storage_account = var.enable_azure_validation ? (
       length(azurerm_storage_account.demo) > 0 ? azurerm_storage_account.demo[0].name : null
     ) : null
-    
+
     gcp_storage_bucket = var.enable_gcp_validation ? (
       length(google_storage_bucket.demo) > 0 ? google_storage_bucket.demo[0].name : null
     ) : null
@@ -153,7 +153,7 @@ output "usage_examples" {
           }
         EOT
       } : null
-      
+
       azure_storage_account = var.enable_azure_validation ? {
         resource_block = <<-EOT
           resource "azurerm_storage_account" "example" {
@@ -166,7 +166,7 @@ output "usage_examples" {
           }
         EOT
       } : null
-      
+
       gcp_storage_bucket = var.enable_gcp_validation ? {
         resource_block = <<-EOT
           resource "google_storage_bucket" "example" {

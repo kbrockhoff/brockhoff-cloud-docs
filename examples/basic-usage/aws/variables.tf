@@ -6,7 +6,7 @@ variable "name" {
   description = "Base name for resources"
   type        = string
   default     = "basic-compute"
-  
+
   validation {
     condition     = can(regex("^[a-z0-9-]+$", var.name))
     error_message = "Name must contain only lowercase letters, numbers, and hyphens."
@@ -17,7 +17,7 @@ variable "environment" {
   description = "Environment name (dev, staging, prod)"
   type        = string
   default     = "dev"
-  
+
   validation {
     condition = contains([
       "dev", "development", "staging", "stage", "prod", "production"
@@ -30,7 +30,7 @@ variable "environment_type" {
   description = "Environment type for resource configuration defaults"
   type        = string
   default     = "Development"
-  
+
   validation {
     condition = contains([
       "None", "Ephemeral", "Development", "Testing", "UAT", "Production", "MissionCritical"
@@ -62,7 +62,7 @@ variable "instance_type" {
   description = "Instance size (small, medium, large)"
   type        = string
   default     = "small"
-  
+
   validation {
     condition     = contains(["small", "medium", "large"], var.instance_type)
     error_message = "Instance type must be small, medium, or large."

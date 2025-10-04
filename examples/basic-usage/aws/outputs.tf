@@ -80,18 +80,18 @@ output "tags" {
 # Connection information
 output "ssh_connection" {
   description = "SSH connection command (if key pair configured)"
-  value = var.ssh_key_name != "" ? "ssh -i ~/.ssh/${var.ssh_key_name}.pem ec2-user@${module.compute.public_ip}" : "SSH key not configured"
+  value       = var.ssh_key_name != "" ? "ssh -i ~/.ssh/${var.ssh_key_name}.pem ec2-user@${module.compute.public_ip}" : "SSH key not configured"
 }
 
 # Resource summary
 output "resource_summary" {
   description = "Summary of created resources"
   value = {
-    instance_type    = var.instance_type
-    region          = var.aws_region
-    environment     = var.environment
-    monitoring      = var.monitoring_enabled
-    encryption      = var.create_kms_key
-    estimated_cost  = module.compute.monthly_cost_estimate
+    instance_type  = var.instance_type
+    region         = var.aws_region
+    environment    = var.environment
+    monitoring     = var.monitoring_enabled
+    encryption     = var.create_kms_key
+    estimated_cost = module.compute.monthly_cost_estimate
   }
 }

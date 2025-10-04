@@ -64,7 +64,7 @@ variable "azure_region" {
 variable "create_azure_resources" {
   description = "Whether to create Azure resources"
   type        = bool
-  default     = false  # Set to false by default to avoid requiring Azure credentials
+  default     = false # Set to false by default to avoid requiring Azure credentials
 }
 
 # GCP Configuration
@@ -83,7 +83,7 @@ variable "gcp_region" {
 variable "create_gcp_resources" {
   description = "Whether to create GCP resources"
   type        = bool
-  default     = false  # Set to false by default to avoid requiring GCP credentials
+  default     = false # Set to false by default to avoid requiring GCP credentials
 }
 
 # Environment Configuration

@@ -91,19 +91,19 @@ output "resource_group_location" {
 # Connection information
 output "ssh_connection" {
   description = "SSH connection command (if SSH key configured)"
-  value = var.ssh_public_key != "" ? "ssh ${var.admin_username}@${module.compute.public_ip}" : "SSH key not configured"
+  value       = var.ssh_public_key != "" ? "ssh ${var.admin_username}@${module.compute.public_ip}" : "SSH key not configured"
 }
 
 # Resource summary
 output "resource_summary" {
   description = "Summary of created resources"
   value = {
-    vm_size         = local.vm_size_map[var.instance_type]
-    location        = var.azure_location
-    environment     = var.environment
-    monitoring      = var.monitoring_enabled
-    encryption      = var.create_key_vault
-    estimated_cost  = module.compute.monthly_cost_estimate
+    vm_size        = local.vm_size_map[var.instance_type]
+    location       = var.azure_location
+    environment    = var.environment
+    monitoring     = var.monitoring_enabled
+    encryption     = var.create_key_vault
+    estimated_cost = module.compute.monthly_cost_estimate
   }
 }
 

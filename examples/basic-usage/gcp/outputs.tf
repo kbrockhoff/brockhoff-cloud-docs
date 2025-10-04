@@ -96,20 +96,20 @@ output "zone" {
 # Connection information
 output "ssh_connection" {
   description = "SSH connection command (if SSH keys configured)"
-  value = length(var.ssh_public_keys) > 0 ? "gcloud compute ssh ${module.compute.instance_name} --zone=${var.gcp_zone != "" ? var.gcp_zone : data.google_compute_zones.available.names[0]}" : "SSH keys not configured"
+  value       = length(var.ssh_public_keys) > 0 ? "gcloud compute ssh ${module.compute.instance_name} --zone=${var.gcp_zone != "" ? var.gcp_zone : data.google_compute_zones.available.names[0]}" : "SSH keys not configured"
 }
 
 # Resource summary
 output "resource_summary" {
   description = "Summary of created resources"
   value = {
-    machine_type    = local.machine_type_map[var.instance_type]
-    region          = var.gcp_region
+    machine_type   = local.machine_type_map[var.instance_type]
+    region         = var.gcp_region
     zone           = var.gcp_zone != "" ? var.gcp_zone : data.google_compute_zones.available.names[0]
-    environment     = var.environment
-    monitoring      = var.monitoring_enabled
-    encryption      = var.create_kms_key
-    estimated_cost  = module.compute.monthly_cost_estimate
+    environment    = var.environment
+    monitoring     = var.monitoring_enabled
+    encryption     = var.create_kms_key
+    estimated_cost = module.compute.monthly_cost_estimate
   }
 }
 

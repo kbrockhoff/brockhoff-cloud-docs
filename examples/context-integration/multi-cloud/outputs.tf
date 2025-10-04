@@ -118,9 +118,9 @@ output "naming_comparison" {
 output "tagging_comparison" {
   description = "Comparison of tagging/labeling across cloud providers"
   value = {
-    aws_tags     = local.aws_tags
-    azure_tags   = local.azure_tags
-    gcp_labels   = local.gcp_labels
+    aws_tags   = local.aws_tags
+    azure_tags = local.azure_tags
+    gcp_labels = local.gcp_labels
   }
 }
 
@@ -129,27 +129,27 @@ output "validation_results" {
   description = "Validation results for each cloud provider"
   value = {
     aws = {
-      name_valid   = can(regex(local.aws_constraints.name_pattern, local.aws_name_prefix))
-      name_length  = length(local.aws_name_prefix)
-      max_length   = local.aws_constraints.max_name_length
-      tags_count   = length(local.aws_tags)
-      max_tags     = local.aws_constraints.max_tags
+      name_valid  = can(regex(local.aws_constraints.name_pattern, local.aws_name_prefix))
+      name_length = length(local.aws_name_prefix)
+      max_length  = local.aws_constraints.max_name_length
+      tags_count  = length(local.aws_tags)
+      max_tags    = local.aws_constraints.max_tags
     }
     azure = {
-      name_valid   = can(regex(local.azure_constraints.name_pattern, local.azure_name_prefix))
-      name_length  = length(local.azure_name_prefix)
-      max_length   = local.azure_constraints.max_name_length
-      storage_name = local.azure_storage_name
+      name_valid    = can(regex(local.azure_constraints.name_pattern, local.azure_name_prefix))
+      name_length   = length(local.azure_name_prefix)
+      max_length    = local.azure_constraints.max_name_length
+      storage_name  = local.azure_storage_name
       storage_valid = can(regex(local.azure_constraints.storage_pattern, local.azure_storage_name))
-      tags_count   = length(local.azure_tags)
-      max_tags     = local.azure_constraints.max_tags
+      tags_count    = length(local.azure_tags)
+      max_tags      = local.azure_constraints.max_tags
     }
     gcp = {
-      name_valid    = can(regex(local.gcp_constraints.name_pattern, local.gcp_name_prefix))
-      name_length   = length(local.gcp_name_prefix)
-      max_length    = local.gcp_constraints.max_name_length
-      labels_count  = length(local.gcp_labels)
-      max_labels    = local.gcp_constraints.max_labels
+      name_valid   = can(regex(local.gcp_constraints.name_pattern, local.gcp_name_prefix))
+      name_length  = length(local.gcp_name_prefix)
+      max_length   = local.gcp_constraints.max_name_length
+      labels_count = length(local.gcp_labels)
+      max_labels   = local.gcp_constraints.max_labels
     }
   }
 }
@@ -159,30 +159,30 @@ output "debug_info" {
   description = "Debug information for multi-cloud context integration"
   value = {
     global_context_enabled = module.global_context.enabled
-    aws_enabled           = var.create_aws_resources
-    azure_enabled         = var.create_azure_resources
-    gcp_enabled           = var.create_gcp_resources
-    environment_type      = var.environment_type
-    
+    aws_enabled            = var.create_aws_resources
+    azure_enabled          = var.create_azure_resources
+    gcp_enabled            = var.create_gcp_resources
+    environment_type       = var.environment_type
+
     # Name generation details
     name_components = {
       namespace   = var.namespace
       environment = var.environment
       name        = var.name
     }
-    
+
     # Cloud-specific configurations
     cloud_configs = {
       aws = {
-        delimiter = module.aws_context.delimiter
+        delimiter  = module.aws_context.delimiter
         label_case = "none"
       }
       azure = {
-        delimiter = module.azure_context.delimiter
+        delimiter  = module.azure_context.delimiter
         label_case = "none"
       }
       gcp = {
-        delimiter = module.gcp_context.delimiter
+        delimiter  = module.gcp_context.delimiter
         label_case = "lower"
       }
     }

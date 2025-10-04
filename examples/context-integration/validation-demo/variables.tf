@@ -128,12 +128,12 @@ variable "test_invalid_names" {
 variable "test_name_scenarios" {
   description = "Different name scenarios to test"
   type = object({
-    valid_short       = optional(string, "demo-app")
-    valid_long        = optional(string, "demo-very-long-application-name")
-    invalid_aws       = optional(string, "-invalid-aws-name-")
-    invalid_azure     = optional(string, "invalid azure name with spaces")
-    invalid_gcp       = optional(string, "Invalid-GCP-Name-With-Uppercase")
-    too_long          = optional(string, "this-is-an-extremely-long-name-that-exceeds-all-cloud-provider-limits-and-should-fail-validation")
+    valid_short   = optional(string, "demo-app")
+    valid_long    = optional(string, "demo-very-long-application-name")
+    invalid_aws   = optional(string, "-invalid-aws-name-")
+    invalid_azure = optional(string, "invalid azure name with spaces")
+    invalid_gcp   = optional(string, "Invalid-GCP-Name-With-Uppercase")
+    too_long      = optional(string, "this-is-an-extremely-long-name-that-exceeds-all-cloud-provider-limits-and-should-fail-validation")
   })
   default = {}
 }
