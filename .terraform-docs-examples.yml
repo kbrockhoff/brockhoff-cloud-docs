@@ -11,8 +11,8 @@ sections:
 
 recursive:
   enabled: true
-  path: modules
-  include-main: true
+  path: examples
+  include-main: false
 
 output:
   file: README.md

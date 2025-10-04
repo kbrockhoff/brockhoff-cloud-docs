@@ -287,3 +287,64 @@ jobs:
 ## License
 
 This module is released under the Apache 2.0 License.
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.11 |
+| <a name="requirement_external"></a> [external](#requirement\_external) | >= 2.0 |
+| <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_external"></a> [external](#provider\_external) | >= 2.0 |
+| <a name="provider_local"></a> [local](#provider\_local) | >= 2.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [local_file.compliance_report](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
+| [local_file.security_controls_doc](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_module_name"></a> [module\_name](#input\_module\_name) | Name of the module being assessed | `string` | n/a | yes |
+| <a name="input_cloud_provider"></a> [cloud\_provider](#input\_cloud\_provider) | Cloud provider (aws, azure, gcp). If empty, will be detected from context | `string` | `""` | no |
+| <a name="input_context"></a> [context](#input\_context) | Context object from terraform-external-context module | <pre>object({<br/>    cloud_provider = optional(string, "")<br/>    environment    = optional(string, "")<br/>    name_prefix    = optional(string, "")<br/>    tags           = optional(map(string), {})<br/>  })</pre> | <pre>{<br/>  "cloud_provider": "",<br/>  "environment": "",<br/>  "name_prefix": "",<br/>  "tags": {}<br/>}</pre> | no |
+| <a name="input_enabled"></a> [enabled](#input\_enabled) | Enable compliance reporting and assessment | `bool` | `true` | no |
+| <a name="input_environment_type"></a> [environment\_type](#input\_environment\_type) | Environment type for compliance thresholds | `string` | `"Development"` | no |
+| <a name="input_generate_report_file"></a> [generate\_report\_file](#input\_generate\_report\_file) | Generate compliance report as JSON file | `bool` | `true` | no |
+| <a name="input_generate_security_docs"></a> [generate\_security\_docs](#input\_generate\_security\_docs) | Generate security controls documentation | `bool` | `true` | no |
+| <a name="input_module_version"></a> [module\_version](#input\_module\_version) | Version of the module being assessed | `string` | `"1.0.0"` | no |
+| <a name="input_output_path"></a> [output\_path](#input\_output\_path) | Path where compliance reports and documentation will be generated | `string` | `"./compliance-reports"` | no |
+| <a name="input_resource_evidence"></a> [resource\_evidence](#input\_resource\_evidence) | Evidence data collected from Terraform resources for compliance assessment | <pre>map(object({<br/>    found   = bool<br/>    value   = any<br/>    message = optional(string, "")<br/>  }))</pre> | `{}` | no |
+| <a name="input_run_advanced_assessment"></a> [run\_advanced\_assessment](#input\_run\_advanced\_assessment) | Run advanced compliance assessment using external script | `bool` | `false` | no |
+| <a name="input_tags"></a> [tags](#input\_tags) | Additional tags to apply to compliance metadata | `map(string)` | `{}` | no |
+| <a name="input_terraform_plan_file"></a> [terraform\_plan\_file](#input\_terraform\_plan\_file) | Path to Terraform plan JSON file for advanced assessment | `string` | `""` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| <a name="output_compliance_report"></a> [compliance\_report](#output\_compliance\_report) | Complete compliance assessment report |
+| <a name="output_compliance_score"></a> [compliance\_score](#output\_compliance\_score) | Overall compliance score (0.0 to 1.0) |
+| <a name="output_compliance_status"></a> [compliance\_status](#output\_compliance\_status) | Overall compliance status and details |
+| <a name="output_compliance_tags"></a> [compliance\_tags](#output\_compliance\_tags) | Tags for compliance tracking and governance |
+| <a name="output_evidence_summary"></a> [evidence\_summary](#output\_evidence\_summary) | Summary of evidence collection results |
+| <a name="output_framework_info"></a> [framework\_info](#output\_framework\_info) | Information about the compliance framework used |
+| <a name="output_governance_metadata"></a> [governance\_metadata](#output\_governance\_metadata) | Governance and audit metadata for compliance tracking |
+| <a name="output_pillar_scores"></a> [pillar\_scores](#output\_pillar\_scores) | Compliance scores by framework pillar |
+| <a name="output_recommendations"></a> [recommendations](#output\_recommendations) | Compliance improvement recommendations |
+| <a name="output_report_files"></a> [report\_files](#output\_report\_files) | Paths to generated compliance report files |
+| <a name="output_security_controls"></a> [security\_controls](#output\_security\_controls) | Security controls implementation status |
+<!-- END_TF_DOCS -->

@@ -125,3 +125,28 @@ After running these basic examples:
 2. Learn about module composition in `../multi-cloud/`
 3. Review the full documentation in `/docs/`
 4. Customize for your specific use case
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+No requirements.
+
+## Providers
+
+No providers.
+
+## Modules
+
+No modules.
+
+## Resources
+
+No resources.
+
+## Inputs
+
+No inputs.
+
+## Outputs
+
+No outputs.
+<!-- END_TF_DOCS -->

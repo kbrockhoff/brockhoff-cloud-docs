@@ -351,3 +351,28 @@ For questions or issues with portal integration:
 2. Review [example implementations](user-friendly-demo.html)
 3. Validate metadata with the [validation script](../../scripts/validate-portal-metadata.py)
 4. Open an issue with reproduction steps and metadata files
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+No requirements.
+
+## Providers
+
+No providers.
+
+## Modules
+
+No modules.
+
+## Resources
+
+No resources.
+
+## Inputs
+
+No inputs.
+
+## Outputs
+
+No outputs.
+<!-- END_TF_DOCS -->
