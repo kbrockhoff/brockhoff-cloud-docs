@@ -45,7 +45,7 @@ Let's deploy a simple web server on AWS:
 ```hcl
 # main.tf
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.5"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
