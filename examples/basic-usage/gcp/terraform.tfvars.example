@@ -1,49 +1,36 @@
 # Basic GCP Compute Example Configuration
-# Copy this file to terraform.tfvars and customize for your environment
+# Copy this file to terraform.tfvars and customize the values
 
-# Core configuration
-name         = "my-basic-compute"
-environment  = "dev"
+# Application Configuration
+name             = "basic-compute"
+environment      = "dev"
 environment_type = "Development"
 
-# GCP configuration
-gcp_project_id = "my-project-id"  # REQUIRED: Your GCP project ID
+# GCP Configuration
+gcp_project_id = "your-project-id"
 gcp_region     = "us-west1"
-gcp_zone       = "us-west1-a"     # Optional: uses first available zone if not specified
+gcp_zone       = "us-west1-a"
 
-# Compute configuration
-instance_type = "small"  # small (e2-micro), medium (e2-small), large (e2-standard-2)
-
-# OS image configuration
-image_family  = "ubuntu-2004-lts"  # Ubuntu 20.04 LTS
+# Compute Configuration
+instance_type = "small"
+image_family  = "ubuntu-2004-lts"
 image_project = "ubuntu-os-cloud"
 
-# Network configuration (optional - uses default network if not specified)
-# network_name = "my-existing-network"
-# subnet_name  = "my-existing-subnet"
+# Network Configuration
+network_name = ""  # Leave empty to use default network
+subnet_name  = ""  # Leave empty to use default subnet
 
-# Security configuration
-allowed_cidr_blocks = [
-  "10.0.0.0/8",      # Private networks
-  "172.16.0.0/12",   # Private networks  
-  "192.168.0.0/16"   # Private networks
-  # "203.0.113.0/24" # Add your public IP range if needed
-]
+# Security Configuration
+allowed_cidr_blocks = ["0.0.0.0/0"]  # WARNING: Open to internet - restrict in production
+ssh_public_keys     = []             # Add your SSH public keys here
 
-# SSH access (optional)
-ssh_public_keys = [
-  # "ssh-rsa AAAAB3NzaC1yc2EAAAA... your-public-key user@hostname"
-]
+# Feature Configuration
+create_kms_key      = true
+monitoring_enabled  = false
+alarms_enabled      = false
 
-# Feature configuration
-create_kms_key     = true   # Create Cloud KMS key for encryption
-monitoring_enabled = false  # Enable Cloud Monitoring (additional cost)
-alarms_enabled    = false  # Enable Cloud Monitoring alerts (additional cost)
-
-# Additional labels (optional)
+# Additional Labels
 additional_labels = {
-  project     = "basic-example"
-  owner       = "dev-team"
-  cost-center = "engineering"
-  purpose     = "learning"
+  project = "basic-compute-example"
+  owner   = "devops"
 }

@@ -63,9 +63,9 @@ variable "gcp_region" {
 }
 
 variable "gcp_zone" {
-  description = "GCP zone for resources (optional, uses first available zone if not specified)"
+  description = "GCP zone for resources"
   type        = string
-  default     = ""
+  default     = "us-west1-a"
 }
 
 # Compute configuration

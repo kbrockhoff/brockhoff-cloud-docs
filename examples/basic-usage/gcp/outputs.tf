@@ -4,66 +4,83 @@
 # Primary resource outputs
 output "instance_id" {
   description = "Compute Engine instance ID"
-  value       = module.compute.instance_id
+  value       = google_compute_instance.main.instance_id
 }
 
 output "instance_name" {
   description = "Compute Engine instance name"
-  value       = module.compute.instance_name
+  value       = google_compute_instance.main.name
 }
 
 output "public_ip" {
   description = "External IP address of the instance"
-  value       = module.compute.public_ip
+  value       = google_compute_instance.main.network_interface[0].access_config[0].nat_ip
 }
 
 output "private_ip" {
   description = "Internal IP address of the instance"
-  value       = module.compute.private_ip
+  value       = google_compute_instance.main.network_interface[0].network_ip
 }
 
 output "firewall_rule_name" {
   description = "Firewall rule name"
-  value       = module.compute.firewall_rule_name
+  value       = google_compute_firewall.web.name
 }
 
 # Standard encryption outputs
 output "kms_key_id" {
   description = "Cloud KMS key ID used for encryption"
-  value       = module.compute.kms_key_id
+  value       = var.create_kms_key ? google_kms_crypto_key.main[0].id : null
 }
 
 output "kms_key_name" {
   description = "Cloud KMS key name used for encryption"
-  value       = module.compute.kms_key_name
+  value       = var.create_kms_key ? google_kms_crypto_key.main[0].name : null
 }
 
-# Standard monitoring outputs
-output "notification_channel_id" {
-  description = "Notification channel ID for alerts"
-  value       = module.compute.notification_channel_id
-}
-
-# Standard cost estimation outputs
+# Standard cost estimation outputs (simplified)
 output "monthly_cost_estimate" {
   description = "Estimated monthly cost in USD"
-  value       = module.compute.monthly_cost_estimate
+  value       = "~$5.50 (e2-micro in us-west1)"
 }
 
 output "cost_breakdown" {
   description = "Detailed cost breakdown by service"
-  value       = module.compute.cost_breakdown
+  value = {
+    compute = "~$5.50/month (e2-micro)"
+    storage = "~$2.00/month (20GB pd-standard)"
+    network = "~$0.00/month (first 1GB free)"
+  }
 }
 
-# Compliance and governance outputs
+# Compliance and governance outputs (simplified)
 output "compliance_report" {
   description = "Well-architected framework compliance assessment"
-  value       = module.compute.compliance_report
+  value = {
+    security = {
+      encryption_at_rest = var.create_kms_key
+      firewall_rules = true
+      iam_roles = false
+    }
+    reliability = {
+      multi_zone = false
+      backup = false
+    }
+    cost_optimization = {
+      right_sizing = true
+      preemptible_instances = false
+    }
+  }
 }
 
 output "governance_metadata" {
   description = "Governance and audit metadata"
-  value       = module.compute.governance_metadata
+  value = {
+    created_by = "terraform"
+    module_version = "basic-usage-v1.0"
+    compliance_frameworks = ["Google Cloud Architecture Framework"]
+    labels = module.context.tags
+  }
 }
 
 # Context outputs for reference
@@ -90,13 +107,18 @@ output "region" {
 
 output "zone" {
   description = "GCP zone"
-  value       = var.gcp_zone != "" ? var.gcp_zone : data.google_compute_zones.available.names[0]
+  value       = var.gcp_zone
 }
 
 # Connection information
 output "ssh_connection" {
   description = "SSH connection command (if SSH keys configured)"
-  value       = length(var.ssh_public_keys) > 0 ? "gcloud compute ssh ${module.compute.instance_name} --zone=${var.gcp_zone != "" ? var.gcp_zone : data.google_compute_zones.available.names[0]}" : "SSH keys not configured"
+  value       = length(var.ssh_public_keys) > 0 ? "gcloud compute ssh ${google_compute_instance.main.name} --zone=${var.gcp_zone}" : "SSH keys not configured"
+}
+
+output "web_url" {
+  description = "URL to access the web application"
+  value       = "http://${google_compute_instance.main.network_interface[0].access_config[0].nat_ip}"
 }
 
 # Resource summary
@@ -105,19 +127,10 @@ output "resource_summary" {
   value = {
     machine_type   = local.machine_type_map[var.instance_type]
     region         = var.gcp_region
-    zone           = var.gcp_zone != "" ? var.gcp_zone : data.google_compute_zones.available.names[0]
+    zone           = var.gcp_zone
     environment    = var.environment
     monitoring     = var.monitoring_enabled
     encryption     = var.create_kms_key
-    estimated_cost = module.compute.monthly_cost_estimate
-  }
-}
-
-# Local reference for output
-locals {
-  machine_type_map = {
-    small  = "e2-micro"
-    medium = "e2-small"
-    large  = "e2-standard-2"
+    estimated_cost = "~$5.50/month"
   }
 }

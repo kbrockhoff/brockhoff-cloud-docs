@@ -56,8 +56,7 @@ resource "random_id" "suffix" {
 
 # Context module for consistent naming and tagging
 module "context" {
-  source  = "kbrockhoff/external-context/terraform"
-  version = "~> 1.0"
+  source = "kbrockhoff/context/external"
 
   namespace   = var.namespace
   environment = var.environment
