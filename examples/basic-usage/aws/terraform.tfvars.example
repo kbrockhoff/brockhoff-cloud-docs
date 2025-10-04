@@ -1,0 +1,41 @@
+# Basic AWS Compute Example Configuration
+# Copy this file to terraform.tfvars and customize for your environment
+
+# Core configuration
+name         = "my-basic-compute"
+environment  = "dev"
+environment_type = "Development"
+
+# AWS configuration
+aws_region = "us-west-2"
+
+# Compute configuration
+instance_type = "small"  # small (t3.micro), medium (t3.small), large (t3.medium)
+
+# Network configuration (optional - uses defaults if not specified)
+# vpc_id    = "vpc-12345678"
+# subnet_id = "subnet-12345678"
+
+# Security configuration
+allowed_cidr_blocks = [
+  "10.0.0.0/8",      # Private networks
+  "172.16.0.0/12",   # Private networks  
+  "192.168.0.0/16"   # Private networks
+  # "203.0.113.0/24" # Add your public IP range if needed
+]
+
+# SSH access (optional)
+# ssh_key_name = "my-key-pair"  # AWS key pair name for SSH access
+
+# Feature configuration
+create_kms_key      = true   # Create KMS key for encryption
+monitoring_enabled  = false  # Enable CloudWatch monitoring (additional cost)
+alarms_enabled     = false  # Enable CloudWatch alarms (additional cost)
+
+# Additional tags (optional)
+additional_tags = {
+  Project     = "BasicExample"
+  Owner       = "DevTeam"
+  CostCenter  = "Engineering"
+  Purpose     = "Learning"
+}

@@ -1,0 +1,280 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 3 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+env:
+  TF_VERSION: "1.11.4"
+
+jobs:
+  vulnerability-scan:
+    name: Vulnerability Scanning
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run Trivy in table format
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+
+  terraform-security:
+    name: Terraform Security Scanning
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Run TFSec security scanner
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          format: sarif
+          soft_fail: false
+          additional_args: --minimum-severity MEDIUM
+
+      - name: Upload TFSec scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: tfsec.sarif
+
+      - name: Run Checkov security scanner
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+          soft_fail: true
+
+      - name: Upload Checkov scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-results.sarif
+
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run GitLeaks secret scanner
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      - name: Run TruffleHog secret scanner
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  dependency-scan:
+    name: Dependency Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Run Nancy vulnerability scanner for Go dependencies
+        if: hashFiles('test/go.mod') != ''
+        run: |
+          go install github.com/sonatypecommunity/nancy@latest
+          cd test && go list -json -deps ./... | nancy sleuth
+
+      - name: Run Govulncheck
+        if: hashFiles('test/go.mod') != ''
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: '1.21'
+          go-package: ./test/...
+
+  compliance-scan:
+    name: Compliance Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Run Terrascan compliance scanner
+        uses: tenable/terrascan-action@main
+        with:
+          iac_type: 'terraform'
+          iac_version: 'v14'
+          policy_type: 'aws,azure,gcp'
+          only_warn: true
+          sarif_upload: true
+
+      - name: Upload Terrascan scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: terrascan.sarif
+
+      - name: Run custom compliance checks
+        run: |
+          echo "🔍 Running custom compliance checks..."
+          
+          # Check for required security configurations
+          echo "Checking for encryption configurations..."
+          if ! grep -r "encryption" --include="*.tf" .; then
+            echo "⚠️ Warning: No encryption configurations found"
+          fi
+          
+          # Check for monitoring configurations
+          echo "Checking for monitoring configurations..."
+          if ! grep -r "monitoring\|cloudwatch\|log" --include="*.tf" .; then
+            echo "⚠️ Warning: Limited monitoring configurations found"
+          fi
+          
+          # Check for backup configurations
+          echo "Checking for backup configurations..."
+          if ! grep -r "backup\|snapshot" --include="*.tf" .; then
+            echo "⚠️ Warning: No backup configurations found"
+          fi
+          
+          echo "✅ Custom compliance checks completed"
+
+  license-scan:
+    name: License Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check license headers
+        run: |
+          echo "🔍 Checking license headers..."
+          
+          # Check for Apache 2.0 license in source files
+          missing_license=()
+          
+          find . -name "*.tf" -o -name "*.go" -o -name "*.py" | while read file; do
+            if ! head -10 "$file" | grep -i "apache\|license" > /dev/null; then
+              echo "⚠️ Missing license header: $file"
+            fi
+          done
+          
+          # Check for LICENSE file
+          if [ ! -f "LICENSE" ]; then
+            echo "❌ Missing LICENSE file"
+            exit 1
+          fi
+          
+          # Verify LICENSE file content
+          if ! grep -i "apache license" LICENSE > /dev/null; then
+            echo "❌ LICENSE file does not contain Apache License"
+            exit 1
+          fi
+          
+          echo "✅ License checks passed"
+
+      - name: Run FOSSA license scan
+        if: env.FOSSA_API_KEY != ''
+        uses: fossas/fossa-action@main
+        with:
+          api-key: ${{ secrets.FOSSA_API_KEY }}
+
+  security-report:
+    name: Security Report
+    runs-on: ubuntu-latest
+    needs: [vulnerability-scan, terraform-security, secret-scan, dependency-scan, compliance-scan, license-scan]
+    if: always()
+    
+    steps:
+      - name: Generate Security Summary
+        run: |
+          echo "# 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Vulnerability Scan | ${{ needs.vulnerability-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Terraform Security | ${{ needs.terraform-security.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scan | ${{ needs.secret-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Scan | ${{ needs.dependency-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Compliance Scan | ${{ needs.compliance-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Scan | ${{ needs.license-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Overall status
+          if [ "${{ needs.vulnerability-scan.result }}" = "success" ] && \
+             [ "${{ needs.terraform-security.result }}" = "success" ] && \
+             [ "${{ needs.secret-scan.result }}" = "success" ] && \
+             [ "${{ needs.dependency-scan.result }}" = "success" ] && \
+             [ "${{ needs.compliance-scan.result }}" = "success" ] && \
+             [ "${{ needs.license-scan.result }}" = "success" ]; then
+            echo "## ✅ All security scans passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Some security scans failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the failed scans and address any security issues before merging." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Fail on critical security issues
+        if: needs.vulnerability-scan.result == 'failure' || needs.terraform-security.result == 'failure' || needs.secret-scan.result == 'failure'
+        run: |
+          echo "❌ Critical security issues detected!"
+          echo "Please review and fix the security vulnerabilities before proceeding."
+          exit 1

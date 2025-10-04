@@ -1,0 +1,296 @@
+# Azure Well-Architected Framework Compliance Mapping
+# This file maps module implementations to Azure Well-Architected Framework pillars and best practices
+
+framework:
+  name: "Microsoft Azure Well-Architected Framework"
+  version: "2023"
+  url: "https://docs.microsoft.com/en-us/azure/architecture/framework/"
+
+pillars:
+  operational_excellence:
+    description: "Operations processes that keep a system running in production"
+    controls:
+      - id: "OE01"
+        title: "Embrace DevOps Culture"
+        implementation: "Infrastructure as Code with Azure DevOps integration"
+        evidence_fields:
+          - "azurerm_resource_group.main.name"
+          - "local.module_metadata"
+          - "azurerm_log_analytics_workspace.main.id"
+        validation_checks:
+          - "All resources deployed via Terraform"
+          - "Resource tagging strategy implemented"
+          - "Log Analytics workspace configured"
+        
+      - id: "OE02"
+        title: "Establish Development Standards"
+        implementation: "Standardized module structure and naming conventions"
+        evidence_fields:
+          - "local.naming_convention"
+          - "azurerm_management_group_policy_assignment.main.*.id"
+        validation_checks:
+          - "Azure Policy assignments active"
+          - "Naming conventions enforced"
+        
+      - id: "OE03"
+        title: "Evolve Operations with Observability"
+        implementation: "Comprehensive monitoring with Azure Monitor"
+        evidence_fields:
+          - "azurerm_monitor_diagnostic_setting.main.id"
+          - "azurerm_application_insights.main.id"
+          - "azurerm_monitor_action_group.main.id"
+        validation_checks:
+          - "Diagnostic settings configured for all resources"
+          - "Application Insights enabled"
+          - "Alert action groups configured"
+        
+      - id: "OE04"
+        title: "Deploy with Confidence"
+        implementation: "Automated testing and deployment validation"
+        evidence_fields:
+          - "local.deployment_validation"
+          - "azurerm_resource_group_template_deployment.validation"
+        validation_checks:
+          - "Pre-deployment validation enabled"
+          - "Rollback procedures defined"
+
+  security:
+    description: "Protecting applications and data from threats"
+    controls:
+      - id: "SE01"
+        title: "Plan Your Security Readiness"
+        implementation: "Security baseline and threat modeling"
+        evidence_fields:
+          - "azurerm_security_center_subscription_pricing.main.tier"
+          - "azurerm_security_center_contact.main.email"
+        validation_checks:
+          - "Azure Security Center Standard tier enabled"
+          - "Security contact configured"
+        
+      - id: "SE02"
+        title: "Design to Protect Confidentiality"
+        implementation: "Data encryption and access controls"
+        evidence_fields:
+          - "azurerm_key_vault.main.id"
+          - "azurerm_key_vault_key.main.id"
+          - "azurerm_storage_account.main.enable_https_traffic_only"
+        validation_checks:
+          - "Key Vault encryption enabled"
+          - "HTTPS-only traffic enforced"
+          - "Customer-managed keys used"
+        
+      - id: "SE03"
+        title: "Design to Protect Integrity"
+        implementation: "Data integrity and validation controls"
+        evidence_fields:
+          - "azurerm_storage_account.main.blob_properties"
+          - "azurerm_sql_database.main.threat_detection_policy"
+        validation_checks:
+          - "Blob versioning and soft delete enabled"
+          - "SQL threat detection active"
+        
+      - id: "SE04"
+        title: "Design to Protect Availability"
+        implementation: "DDoS protection and availability controls"
+        evidence_fields:
+          - "azurerm_network_ddos_protection_plan.main.id"
+          - "azurerm_application_gateway.main.waf_configuration"
+        validation_checks:
+          - "DDoS protection enabled"
+          - "Web Application Firewall configured"
+        
+      - id: "SE05"
+        title: "Sustain and Evolve Your Security Posture"
+        implementation: "Continuous security monitoring and improvement"
+        evidence_fields:
+          - "azurerm_security_center_auto_provisioning.main.auto_provision"
+          - "azurerm_sentinel_data_connector_azure_active_directory.main.id"
+        validation_checks:
+          - "Auto-provisioning of security agents enabled"
+          - "Azure Sentinel integration active"
+
+  reliability:
+    description: "Ability to recover from failures and continue to function"
+    controls:
+      - id: "RE01"
+        title: "Design for Business Requirements"
+        implementation: "SLA-driven design with appropriate redundancy"
+        evidence_fields:
+          - "local.sla_requirements"
+          - "azurerm_availability_set.main.*.id"
+          - "local.effective_config.rto_hours"
+        validation_checks:
+          - "SLA requirements documented"
+          - "Availability sets configured"
+          - "RTO/RPO targets defined"
+        
+      - id: "RE02"
+        title: "Design for Resilience"
+        implementation: "Multi-region deployment with failover capabilities"
+        evidence_fields:
+          - "azurerm_virtual_machine.main.*.zones"
+          - "azurerm_traffic_manager_profile.main.id"
+          - "azurerm_site_recovery_fabric.main.*.id"
+        validation_checks:
+          - "Resources deployed across availability zones"
+          - "Traffic Manager configured for failover"
+          - "Azure Site Recovery enabled"
+        
+      - id: "RE03"
+        title: "Design for Recovery"
+        implementation: "Automated backup and disaster recovery"
+        evidence_fields:
+          - "azurerm_backup_policy_vm.main.id"
+          - "azurerm_sql_database.main.geo_backup_enabled"
+          - "azurerm_storage_account.main.cross_tenant_replication_enabled"
+        validation_checks:
+          - "VM backup policies configured"
+          - "Database geo-backup enabled"
+          - "Cross-region replication active"
+        
+      - id: "RE04"
+        title: "Design for Operations"
+        implementation: "Health monitoring and automated remediation"
+        evidence_fields:
+          - "azurerm_monitor_metric_alert.main.*.id"
+          - "azurerm_automation_runbook.remediation.*.id"
+        validation_checks:
+          - "Health monitoring alerts configured"
+          - "Automated remediation runbooks active"
+
+  performance_efficiency:
+    description: "Ability to scale to meet the demands placed on it by users"
+    controls:
+      - id: "PE01"
+        title: "Performance Targets and Requirements"
+        implementation: "Performance baselines and monitoring"
+        evidence_fields:
+          - "azurerm_application_insights.main.id"
+          - "azurerm_monitor_metric_alert.performance.*.id"
+        validation_checks:
+          - "Performance monitoring configured"
+          - "Performance alerts defined"
+        
+      - id: "PE02"
+        title: "Capacity Planning"
+        implementation: "Auto-scaling and capacity management"
+        evidence_fields:
+          - "azurerm_monitor_autoscale_setting.main.id"
+          - "azurerm_virtual_machine_scale_set.main.id"
+        validation_checks:
+          - "Auto-scaling rules configured"
+          - "Scale sets properly sized"
+        
+      - id: "PE03"
+        title: "Select Services for Performance"
+        implementation: "Optimized service selection and configuration"
+        evidence_fields:
+          - "azurerm_virtual_machine.main.vm_size"
+          - "azurerm_storage_account.main.account_tier"
+          - "azurerm_sql_database.main.sku_name"
+        validation_checks:
+          - "VM sizes appropriate for workload"
+          - "Storage tiers optimized"
+          - "Database SKUs right-sized"
+        
+      - id: "PE04"
+        title: "Optimize Performance"
+        implementation: "Performance optimization and caching"
+        evidence_fields:
+          - "azurerm_cdn_profile.main.id"
+          - "azurerm_redis_cache.main.id"
+        validation_checks:
+          - "CDN configured for static content"
+          - "Caching strategies implemented"
+
+  cost_optimization:
+    description: "Managing costs to maximize the value delivered"
+    controls:
+      - id: "CO01"
+        title: "Develop Cost-Management Discipline"
+        implementation: "Cost monitoring and budget management"
+        evidence_fields:
+          - "module.pricing.monthly_cost_estimate"
+          - "azurerm_consumption_budget_resource_group.main.id"
+          - "local.cost_allocation_tags"
+        validation_checks:
+          - "Cost budgets configured"
+          - "Cost allocation tags applied"
+        
+      - id: "CO02"
+        title: "Design with a Cost-Efficiency Mindset"
+        implementation: "Cost-optimized architecture decisions"
+        evidence_fields:
+          - "local.cost_optimization_recommendations"
+          - "azurerm_virtual_machine.main.*.priority"
+        validation_checks:
+          - "Spot instances used where appropriate"
+          - "Cost optimization recommendations provided"
+        
+      - id: "CO03"
+        title: "Monitor and Optimize Costs"
+        implementation: "Continuous cost monitoring and optimization"
+        evidence_fields:
+          - "azurerm_monitor_action_group.cost_alerts.id"
+          - "azurerm_advisor_recommendations.cost.*.id"
+        validation_checks:
+          - "Cost alerts configured"
+          - "Azure Advisor recommendations reviewed"
+        
+      - id: "CO04"
+        title: "Maximize Efficiency of Cloud Spend"
+        implementation: "Reserved instances and hybrid benefits"
+        evidence_fields:
+          - "local.reserved_instance_recommendations"
+          - "azurerm_virtual_machine.main.license_type"
+        validation_checks:
+          - "Reserved instance opportunities identified"
+          - "Azure Hybrid Benefit utilized"
+
+# Azure-specific compliance features
+azure_specific:
+  governance:
+    - id: "GOV01"
+      title: "Azure Policy Compliance"
+      implementation: "Policy-driven governance and compliance"
+      evidence_fields:
+        - "azurerm_policy_assignment.main.*.id"
+        - "azurerm_policy_definition.custom.*.id"
+      validation_checks:
+        - "Required policies assigned"
+        - "Policy compliance monitored"
+    
+    - id: "GOV02"
+      title: "Resource Organization"
+      implementation: "Management groups and resource organization"
+      evidence_fields:
+        - "azurerm_management_group.main.id"
+        - "azurerm_resource_group.main.tags"
+      validation_checks:
+        - "Management group hierarchy defined"
+        - "Resource tagging enforced"
+
+# Compliance assessment configuration
+assessment:
+  scoring:
+    method: "weighted"
+    weights:
+      operational_excellence: 0.2
+      security: 0.3
+      reliability: 0.2
+      performance_efficiency: 0.15
+      cost_optimization: 0.15
+  
+  thresholds:
+    production:
+      minimum_score: 0.85
+      required_controls: ["SE01", "SE02", "SE03", "SE04", "RE02", "RE03", "GOV01"]
+    development:
+      minimum_score: 0.70
+      required_controls: ["SE02", "SE04", "GOV01"]
+  
+  reporting:
+    format: "json"
+    include_evidence: true
+    include_recommendations: true
+    azure_specific: true

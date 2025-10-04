@@ -1,0 +1,32 @@
+formatter: "markdown table" # this is required
+
+sections:
+  show:
+    - requirements
+    - providers
+    - inputs
+    - outputs
+    - modules
+    - resources
+
+recursive:
+  enabled: true
+  path: examples
+  include-main: false
+
+output:
+  file: README.md
+  mode: inject
+
+sort:
+  enabled: true
+  by: required
+
+settings:
+  anchor: true
+  default: true
+  escape: true
+  indent: 2
+  required: true
+  sensitive: true
+  type: true

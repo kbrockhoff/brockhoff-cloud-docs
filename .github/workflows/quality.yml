@@ -1,0 +1,435 @@
+name: Quality Assurance
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  TF_VERSION: "1.11.4"
+  GO_VERSION: "1.21"
+
+jobs:
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache TFLint plugins
+        uses: actions/cache@v4
+        with:
+          path: ~/.tflint.d/plugins
+          key: ${{ runner.os }}-tflint-${{ hashFiles('.tflint.hcl') }}
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      - name: Initialize TFLint
+        run: tflint --init
+
+      - name: Run TFLint with detailed output
+        run: |
+          echo "🔍 Running TFLint analysis..."
+          find . -name "*.tf" -exec dirname {} \; | sort -u | while read dir; do
+            if [ -f "$dir/main.tf" ]; then
+              echo "Analyzing $dir"
+              cd "$dir"
+              tflint --format=compact || true
+              cd - > /dev/null
+            fi
+          done
+
+      - name: Run Go linting (if Go code exists)
+        if: hashFiles('test/go.mod') != ''
+        run: |
+          echo "🔍 Running Go linting..."
+          cd test
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          golangci-lint run --timeout=5m
+
+      - name: Check code complexity
+        run: |
+          echo "🔍 Analyzing code complexity..."
+          
+          # Count lines of code
+          echo "## Code Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          tf_files=$(find . -name "*.tf" | wc -l)
+          tf_lines=$(find . -name "*.tf" -exec wc -l {} + | tail -1 | awk '{print $1}')
+          
+          echo "- Terraform files: $tf_files" >> $GITHUB_STEP_SUMMARY
+          echo "- Terraform lines: $tf_lines" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -d "test" ]; then
+            go_files=$(find test -name "*.go" | wc -l)
+            go_lines=$(find test -name "*.go" -exec wc -l {} + | tail -1 | awk '{print $1}' || echo "0")
+            echo "- Go test files: $go_files" >> $GITHUB_STEP_SUMMARY
+            echo "- Go test lines: $go_lines" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check for large files
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Large Files (>500 lines)" >> $GITHUB_STEP_SUMMARY
+          find . -name "*.tf" -o -name "*.go" | xargs wc -l | awk '$1 > 500 {print "- " $2 ": " $1 " lines"}' >> $GITHUB_STEP_SUMMARY || echo "None found" >> $GITHUB_STEP_SUMMARY
+
+  documentation-quality:
+    name: Documentation Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install documentation tools
+        run: |
+          npm install -g markdownlint-cli
+          npm install -g markdown-link-check
+          npm install -g alex
+          npm install -g write-good
+
+      - name: Lint Markdown files
+        run: |
+          echo "🔍 Linting Markdown files..."
+          
+          # Create markdownlint configuration
+          cat > .markdownlint.json << 'EOF'
+          {
+            "MD013": {
+              "line_length": 120,
+              "code_blocks": false,
+              "tables": false
+            },
+            "MD033": false,
+            "MD041": false,
+            "MD024": false
+          }
+          EOF
+          
+          markdownlint . --config .markdownlint.json --ignore node_modules --ignore .terraform
+
+      - name: Check markdown links
+        run: |
+          echo "🔍 Checking markdown links..."
+          
+          # Create link check configuration
+          cat > .markdown-link-check.json << 'EOF'
+          {
+            "ignorePatterns": [
+              {
+                "pattern": "^http://localhost"
+              },
+              {
+                "pattern": "^https://registry.terraform.io"
+              }
+            ],
+            "timeout": "20s",
+            "retryOn429": true,
+            "retryCount": 3,
+            "fallbackRetryDelay": "30s",
+            "aliveStatusCodes": [200, 206]
+          }
+          EOF
+          
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.terraform/*" | \
+            xargs markdown-link-check --config .markdown-link-check.json
+
+      - name: Check writing quality
+        run: |
+          echo "🔍 Checking writing quality..."
+          
+          # Check for inclusive language
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.terraform/*" | \
+            xargs alex --why || true
+          
+          # Check writing style
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.terraform/*" | \
+            xargs write-good --so --no-illusion --no-so --no-there-is --no-weasel || true
+
+      - name: Validate documentation structure
+        run: |
+          echo "🔍 Validating documentation structure..."
+          
+          # Check for required files
+          required_files=(
+            "README.md"
+            "CONTRIBUTING.md"
+            "LICENSE"
+            "CHANGELOG.md"
+          )
+          
+          missing_files=()
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              missing_files+=("$file")
+            fi
+          done
+          
+          if [ ${#missing_files[@]} -ne 0 ]; then
+            echo "❌ Missing required files:"
+            printf '%s\n' "${missing_files[@]}"
+            exit 1
+          fi
+          
+          # Check that all modules have README files
+          find . -name "main.tf" -exec dirname {} \; | sort -u | while read dir; do
+            if [[ "$dir" == *"/.terraform"* ]] || [[ "$dir" == */".git"* ]]; then
+              continue
+            fi
+            
+            if [ ! -f "$dir/README.md" ]; then
+              echo "❌ Missing README.md in module directory: $dir"
+              exit 1
+            fi
+          done
+          
+          echo "✅ Documentation structure validation passed"
+
+  terraform-quality:
+    name: Terraform Quality Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Analyze Terraform code quality
+        run: |
+          echo "🔍 Analyzing Terraform code quality..."
+          
+          echo "## Terraform Quality Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Count modules
+          module_count=$(find . -name "main.tf" | wc -l)
+          echo "- Total modules: $module_count" >> $GITHUB_STEP_SUMMARY
+          
+          # Count resources
+          resource_count=$(grep -r "^resource " --include="*.tf" . | wc -l)
+          echo "- Total resources: $resource_count" >> $GITHUB_STEP_SUMMARY
+          
+          # Count data sources
+          data_count=$(grep -r "^data " --include="*.tf" . | wc -l)
+          echo "- Total data sources: $data_count" >> $GITHUB_STEP_SUMMARY
+          
+          # Count variables
+          var_count=$(grep -r "^variable " --include="*.tf" . | wc -l)
+          echo "- Total variables: $var_count" >> $GITHUB_STEP_SUMMARY
+          
+          # Count outputs
+          output_count=$(grep -r "^output " --include="*.tf" . | wc -l)
+          echo "- Total outputs: $output_count" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check Terraform best practices
+        run: |
+          echo "🔍 Checking Terraform best practices..."
+          
+          # Check for variable descriptions
+          echo "## Best Practices Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          vars_without_desc=$(grep -r "^variable " --include="*.tf" . -A 5 | grep -B 5 -A 5 "variable " | grep -L "description" | wc -l || echo "0")
+          echo "- Variables without descriptions: $vars_without_desc" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for output descriptions
+          outputs_without_desc=$(grep -r "^output " --include="*.tf" . -A 5 | grep -B 5 -A 5 "output " | grep -L "description" | wc -l || echo "0")
+          echo "- Outputs without descriptions: $outputs_without_desc" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for hardcoded values
+          hardcoded_ips=$(grep -r "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" --include="*.tf" . | grep -v "0.0.0.0\|127.0.0.1\|10.0.0.0\|172.16.0.0\|192.168.0.0" | wc -l || echo "0")
+          echo "- Potential hardcoded IPs: $hardcoded_ips" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for TODO/FIXME comments
+          todo_count=$(grep -r "TODO\|FIXME\|XXX" --include="*.tf" . | wc -l || echo "0")
+          echo "- TODO/FIXME comments: $todo_count" >> $GITHUB_STEP_SUMMARY
+
+      - name: Validate module standards
+        run: |
+          echo "🔍 Validating module standards..."
+          
+          # Check each module directory
+          find . -name "main.tf" -exec dirname {} \; | sort -u | while read dir; do
+            if [[ "$dir" == *"/.terraform"* ]] || [[ "$dir" == */".git"* ]]; then
+              continue
+            fi
+            
+            echo "Checking module: $dir"
+            
+            # Required files
+            required_files=("main.tf" "variables.tf" "outputs.tf")
+            for file in "${required_files[@]}"; do
+              if [ ! -f "$dir/$file" ]; then
+                echo "❌ Missing $file in $dir"
+              fi
+            done
+            
+            # Check for versions.tf
+            if [ ! -f "$dir/versions.tf" ]; then
+              echo "⚠️ Missing versions.tf in $dir (recommended)"
+            fi
+            
+            # Check for examples
+            if [ ! -d "$dir/examples" ]; then
+              echo "⚠️ Missing examples directory in $dir (recommended)"
+            fi
+          done
+
+  performance-analysis:
+    name: Performance Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Analyze test performance
+        if: hashFiles('test/go.mod') != ''
+        run: |
+          echo "🔍 Analyzing test performance..."
+          
+          cd test
+          
+          # Run benchmarks if they exist
+          if go test -list . | grep -q "Benchmark"; then
+            echo "Running benchmarks..."
+            go test -bench=. -benchmem -run=^$ > benchmark_results.txt
+            cat benchmark_results.txt
+          else
+            echo "No benchmarks found"
+          fi
+          
+          # Analyze test execution time
+          echo "Running performance analysis..."
+          go test -v -json ./... > test_results.json
+          
+          # Extract timing information
+          if command -v jq >/dev/null 2>&1; then
+            echo "## Test Performance" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            total_time=$(jq -r 'select(.Action == "pass" and .Test == null) | .Elapsed' test_results.json | awk '{sum += $1} END {print sum}')
+            test_count=$(jq -r 'select(.Action == "pass" and .Test != null) | .Test' test_results.json | wc -l)
+            
+            echo "- Total test time: ${total_time}s" >> $GITHUB_STEP_SUMMARY
+            echo "- Number of tests: $test_count" >> $GITHUB_STEP_SUMMARY
+            echo "- Average test time: $(echo "scale=2; $total_time / $test_count" | bc)s" >> $GITHUB_STEP_SUMMARY
+            
+            # Find slowest tests
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Slowest Tests" >> $GITHUB_STEP_SUMMARY
+            jq -r 'select(.Action == "pass" and .Test != null and .Elapsed != null) | "\(.Test): \(.Elapsed)s"' test_results.json | sort -k2 -nr | head -5 >> $GITHUB_STEP_SUMMARY
+          fi
+
+  accessibility-check:
+    name: Accessibility Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check documentation accessibility
+        run: |
+          echo "🔍 Checking documentation accessibility..."
+          
+          # Check for alt text in images
+          echo "## Accessibility Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          images_without_alt=$(grep -r "!\[.*\](" --include="*.md" . | grep -v "!\[.*\]" | wc -l || echo "0")
+          echo "- Images without alt text: $images_without_alt" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for proper heading structure
+          heading_issues=$(find . -name "*.md" -exec sh -c 'awk "/^#/ {print NR ": " $0}" "$1"' _ {} \; | grep -E "^[0-9]+: #{4,}" | wc -l || echo "0")
+          echo "- Potential heading structure issues: $heading_issues" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for color-only information
+          color_only=$(grep -ri "red\|green\|blue\|yellow" --include="*.md" . | grep -v "code\|example" | wc -l || echo "0")
+          echo "- Potential color-only information: $color_only" >> $GITHUB_STEP_SUMMARY
+
+  quality-report:
+    name: Quality Report
+    runs-on: ubuntu-latest
+    needs: [code-quality, documentation-quality, terraform-quality, performance-analysis, accessibility-check]
+    if: always()
+    
+    steps:
+      - name: Generate Quality Summary
+        run: |
+          echo "# 📊 Quality Assurance Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Quality | ${{ needs.code-quality.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Documentation Quality | ${{ needs.documentation-quality.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Terraform Quality | ${{ needs.terraform-quality.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance Analysis | ${{ needs.performance-analysis.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Accessibility Check | ${{ needs.accessibility-check.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Calculate quality score
+          passed=0
+          total=5
+          
+          [ "${{ needs.code-quality.result }}" = "success" ] && passed=$((passed + 1))
+          [ "${{ needs.documentation-quality.result }}" = "success" ] && passed=$((passed + 1))
+          [ "${{ needs.terraform-quality.result }}" = "success" ] && passed=$((passed + 1))
+          [ "${{ needs.performance-analysis.result }}" = "success" ] && passed=$((passed + 1))
+          [ "${{ needs.accessibility-check.result }}" = "success" ] && passed=$((passed + 1))
+          
+          score=$((passed * 100 / total))
+          
+          echo "## Quality Score: ${score}%" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ $score -ge 80 ]; then
+            echo "🎉 Excellent quality! All or most checks passed." >> $GITHUB_STEP_SUMMARY
+          elif [ $score -ge 60 ]; then
+            echo "👍 Good quality, but some improvements needed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Quality needs improvement. Please address the failed checks." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Set quality gate
+        run: |
+          # Fail if critical quality checks fail
+          if [ "${{ needs.code-quality.result }}" = "failure" ] || [ "${{ needs.terraform-quality.result }}" = "failure" ]; then
+            echo "❌ Critical quality checks failed!"
+            exit 1
+          fi

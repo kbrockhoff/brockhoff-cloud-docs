@@ -1,0 +1,72 @@
+# Basic Context Integration Example - Terraform Variables
+# Copy this file to terraform.tfvars and customize the values
+
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Context Configuration
+namespace   = "myorg"        # Your organization name or abbreviation
+environment = "dev"          # Environment name (dev, staging, prod, etc.)
+name        = "webapp"       # Application or solution name
+
+# Standard Tags
+tags = {
+  Project     = "WebApplication"
+  Owner       = "DevTeam"
+  CostCenter  = "Engineering"
+  Purpose     = "ContextExample"
+}
+
+# Additional Tags
+additional_tags = {
+  Example     = "BasicUsage"
+  Repository  = "brockhoff-cloud-docs"
+  Terraform   = "true"
+}
+
+# Environment Configuration
+environment_type = "Development"  # Development, Testing, UAT, Production, MissionCritical
+
+# Module Configuration
+instance_type = "t3.micro"  # EC2 instance type for cost optimization
+
+# Encryption Configuration
+create_kms_key               = true
+kms_key_deletion_window_days = 7    # Shorter for development
+
+# Monitoring Configuration
+enable_monitoring = false   # Disabled for development to save costs
+enable_alarms     = false   # Disabled for development
+create_sns_topic  = false   # Not needed without alarms
+
+# Resource Creation (set to false to skip creation)
+create_s3_bucket = true
+create_iam_role  = true
+
+# Example Production Configuration (uncomment and modify as needed)
+# environment_type = "Production"
+# instance_type = "t3.medium"
+# kms_key_deletion_window_days = 30
+# enable_monitoring = true
+# enable_alarms = true
+# create_sns_topic = true
+
+# Example Multi-Environment Configuration
+# For development:
+# environment = "dev"
+# environment_type = "Development"
+# instance_type = "t3.micro"
+# enable_monitoring = false
+
+# For staging:
+# environment = "staging"
+# environment_type = "Testing"
+# instance_type = "t3.small"
+# enable_monitoring = true
+
+# For production:
+# environment = "prod"
+# environment_type = "Production"
+# instance_type = "t3.medium"
+# enable_monitoring = true
+# enable_alarms = true
