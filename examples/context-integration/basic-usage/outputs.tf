@@ -11,35 +11,30 @@ output "context_tags" {
   value       = module.context.tags
 }
 
-output "context_id" {
-  description = "Complete context ID"
-  value       = module.context.id
+output "context_environment_type" {
+  description = "Environment type from context module"
+  value       = module.context.environment_type
 }
 
-# Web Server Module Outputs
+# Web Server Instance Outputs
 output "web_server_instance_id" {
   description = "EC2 instance ID of the web server"
-  value       = module.web_server.instance_id
+  value       = var.create_ec2_instance ? aws_instance.web_server[0].id : null
 }
 
 output "web_server_instance_arn" {
   description = "EC2 instance ARN of the web server"
-  value       = module.web_server.instance_arn
+  value       = var.create_ec2_instance ? aws_instance.web_server[0].arn : null
 }
 
-output "web_server_security_group_id" {
-  description = "Security group ID for the web server"
-  value       = module.web_server.security_group_id
+output "web_server_public_ip" {
+  description = "Public IP of the web server"
+  value       = var.create_ec2_instance ? aws_instance.web_server[0].public_ip : null
 }
 
-output "web_server_kms_key_id" {
-  description = "KMS key ID used by the web server"
-  value       = module.web_server.kms_key_id
-}
-
-output "web_server_monthly_cost_estimate" {
-  description = "Estimated monthly cost for the web server"
-  value       = module.web_server.monthly_cost_estimate
+output "web_server_private_ip" {
+  description = "Private IP of the web server"
+  value       = var.create_ec2_instance ? aws_instance.web_server[0].private_ip : null
 }
 
 # Direct Resource Outputs
@@ -97,6 +92,6 @@ output "debug_info" {
     environment_type = var.environment_type
     cloud_provider   = local.cloud_provider
     tags_count       = length(local.tags)
-    context_enabled  = module.context.enabled
+    context_enabled  = module.context.context.enabled
   }
 }

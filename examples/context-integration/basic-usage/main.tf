@@ -30,54 +30,66 @@ data "aws_caller_identity" "current" {}
 
 # Context module - provides consistent naming and tagging
 module "context" {
-  source  = "kbrockhoff/external-context/terraform"
-  version = "~> 1.0"
+  source = "kbrockhoff/context/external"
 
   # Basic context configuration
-  namespace   = var.namespace
-  environment = var.environment
   name        = var.name
-
-  # Standard tags
-  tags = var.tags
-
-  # Additional tag map for extra tags
-  additional_tag_map = var.additional_tags
+  environment = var.environment
 }
 
-# Example compute module using context
-module "web_server" {
-  source = "../../modules/compute-example" # Local example module
+# Example EC2 instance using context naming and tagging
+resource "aws_instance" "web_server" {
+  count = var.create_ec2_instance ? 1 : 0
 
-  # Pass context to child module
-  context = module.context.context
+  ami           = data.aws_ami.amazon_linux.id
+  instance_type = local.instance_type_map[var.instance_type]
 
-  # Module-specific configuration
-  instance_type    = var.instance_type
-  environment_type = var.environment_type
+  # Use context-generated name
+  tags = merge(local.tags, {
+    Name         = "${local.name_prefix}-web-server"
+    ResourceType = "EC2Instance"
+    Purpose      = "WebServer"
+    Tier         = "Application"
+  })
 
-  # Additional module-specific tags
-  tags = {
-    Purpose = "WebServer"
-    Tier    = "Application"
+  # Enable detailed monitoring if requested
+  monitoring = var.enable_monitoring
+
+  # Use KMS key for EBS encryption if created
+  root_block_device {
+    encrypted   = var.create_kms_key
+    kms_key_id  = var.create_kms_key ? aws_kms_key.example[0].arn : null
+    volume_type = "gp3"
+    volume_size = 20
+  }
+}
+
+# Data source for latest Amazon Linux AMI
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
   }
 
-  # Encryption configuration
-  encryption_config = {
-    create_kms_key               = var.create_kms_key
-    kms_key_deletion_window_days = var.kms_key_deletion_window_days
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
   }
+}
 
-  # Monitoring configuration
-  monitoring_config = {
-    enabled = var.enable_monitoring
-  }
+# SNS topic for alarms (if enabled)
+resource "aws_sns_topic" "alarms" {
+  count = var.create_sns_topic ? 1 : 0
 
-  # Alarms configuration
-  alarms_config = {
-    enabled          = var.enable_alarms
-    create_sns_topic = var.create_sns_topic
-  }
+  name = "${local.name_prefix}-alarms"
+
+  tags = merge(local.tags, {
+    ResourceType = "SNSTopic"
+    Purpose      = "Alarms"
+  })
 }
 
 # Example of direct context usage (without child module)
@@ -85,6 +97,13 @@ locals {
   # Use context-generated values directly
   name_prefix = module.context.name_prefix
   tags        = module.context.tags
+
+  # Instance type mapping
+  instance_type_map = {
+    small  = "t3.micro"
+    medium = "t3.small"
+    large  = "t3.medium"
+  }
 
   # Cloud provider detection
   cloud_provider = "aws" # Detected from provider

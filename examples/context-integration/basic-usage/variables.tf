@@ -58,9 +58,13 @@ variable "environment_type" {
 
 # Module Configuration
 variable "instance_type" {
-  description = "EC2 instance type for the web server"
+  description = "Instance size (small, medium, large)"
   type        = string
-  default     = "t3.micro"
+  default     = "small"
+  validation {
+    condition     = contains(["small", "medium", "large"], var.instance_type)
+    error_message = "Instance type must be small, medium, or large."
+  }
 }
 
 variable "create_kms_key" {
@@ -106,6 +110,12 @@ variable "create_s3_bucket" {
 
 variable "create_iam_role" {
   description = "Whether to create an example IAM role"
+  type        = bool
+  default     = true
+}
+
+variable "create_ec2_instance" {
+  description = "Whether to create an example EC2 instance"
   type        = bool
   default     = true
 }
